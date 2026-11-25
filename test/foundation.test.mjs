@@ -150,7 +150,7 @@ test('HTTPS serves real status, protects controls, and renews IP certificates wi
   await t.test('serves the dashboard and status without credentials or private keys', async () => {
     const response = await request('/api/status');
     const status = JSON.parse(response.body);
-    assert.equal(status.version, '0.7.1');
+    assert.equal(status.version, '0.7.2');
     assert.equal(status.stage, 7);
     assert.equal(status.network.primaryAddress, '192.168.50.10');
     assert.equal(status.server.lanAvailable, false);

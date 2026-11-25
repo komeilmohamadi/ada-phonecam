@@ -15,6 +15,9 @@ import {
   modeControls,
   controlSupported,
   applyCameraControl,
+  formatControlNumber,
+  incrementControlNumber,
+  parseControlNumber,
 } from './camera-controls.js';
 const container = document.getElementById('controls');
 let responseTimer;
@@ -110,9 +113,13 @@ async function execute(m) {
       message = 'Camera stopped.';
     } else {
       const result = await applyCameraControl(track, m.name, m.value);
+      const actual =
+        typeof result.actual === 'number'
+          ? formatControlNumber(result.actual, m.name) || 'not reported'
+          : result.actual ?? 'not reported';
       message = result.verified
         ? 'Camera confirmed the requested value.'
-        : `Requested value was not confirmed. Actual: ${result.actual ?? 'not reported'}.`;
+        : `Requested value was not confirmed. Actual: ${actual}.`;
     }
     send({ type: 'control-result', requestId: m.requestId, ok: true, message });
   } catch (error) {
@@ -139,6 +146,74 @@ function command(name, value) {
       'Camera did not acknowledge the change. Check the phone before retrying.';
   }, 12000);
 }
+function numericField(name, cap, actual, supported) {
+  const group = document.createElement('div');
+  group.className = 'numeric-control';
+  const label = document.createElement('label');
+  const input = document.createElement('input');
+  input.id = `camera-number-${name}`;
+  label.htmlFor = input.id;
+  label.textContent = name === 'zoom' ? 'Zoom (x)' : names[name];
+  input.type = 'number';
+  input.className = 'camera-number';
+  input.step = 'any';
+  input.disabled = !supported;
+  const shown = formatControlNumber(actual, name);
+  input.value = shown;
+  input.placeholder = supported ? 'Not reported' : 'Unavailable';
+  const note = document.createElement('output');
+  note.textContent = supported
+    ? `Range: ${formatControlNumber(cap.min, name)} to ${formatControlNumber(cap.max, name)}`
+    : 'Not exposed by this camera/browser';
+  input.title = shown ? `Actual: ${shown}` : 'Actual value not reported';
+  function request(value) {
+    input.value = formatControlNumber(value, name);
+    command(name, value);
+  }
+  function fail(error) {
+    input.value = shown;
+    document.getElementById('status').textContent = error.message;
+  }
+  input.onchange = () => {
+    if (busy || !supported || input.value === shown) return;
+    try {
+      request(parseControlNumber(name, cap, input.value));
+    } catch (error) {
+      fail(error);
+    }
+  };
+  function step(direction) {
+    if (busy || !supported) return;
+    try {
+      const current = input.value === shown ? actual : parseControlNumber(name, cap, input.value);
+      request(incrementControlNumber(name, cap, current, direction));
+    } catch (error) {
+      fail(error);
+    }
+  }
+  input.onkeydown = (event) => {
+    if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    step(event.key === 'ArrowUp' ? 1 : -1);
+  };
+  const row = document.createElement('div');
+  row.className = 'numeric-step-row';
+  const minus = document.createElement('button');
+  const plus = document.createElement('button');
+  for (const [button, direction, title] of [
+    [minus, -1, 'Decrease'],
+    [plus, 1, 'Increase'],
+  ]) {
+    button.type = 'button';
+    button.textContent = direction === 1 ? '+' : '-';
+    button.setAttribute('aria-label', `${title} ${names[name]}`);
+    button.disabled = !supported;
+    button.onclick = () => step(direction);
+  }
+  row.append(minus, input, plus);
+  group.append(label, row, note);
+  container.append(group);
+}
 function render(camera) {
   clearTimeout(responseTimer);
   latest = camera;
@@ -151,7 +226,7 @@ function render(camera) {
     return;
   }
   const s = camera.settings;
-  summary.textContent = `Actual capture: ${s.width ?? '?'} × ${s.height ?? '?'} at ${s.frameRate ?? '?'} FPS. Receive quality may differ.`;
+  summary.textContent = `Actual capture: ${s.width ?? '?'} × ${s.height ?? '?'} at ${formatControlNumber(s.frameRate, 'frameRate') || '?'} FPS. Receive quality may differ.`;
   container.append(summary);
   function field(title, input) {
     const label = document.createElement('label');
@@ -185,15 +260,20 @@ function render(camera) {
     bitrate.type = 'number';
     bitrate.min = '1';
     bitrate.max = '150';
-    bitrate.step = '0.5';
-    bitrate.value = q.bitrate;
+    bitrate.step = 'any';
+    let bitrateTarget;
+    const setBitrate = (value) => {
+      bitrateTarget = value;
+      bitrate.value = formatControlNumber(value);
+    };
+    setBitrate(q.bitrate);
     const codec = select(
       [['auto', 'Automatic'], ...camera.quality.codecs.map((c) => [c, c])],
       q.codec,
     );
     codec.disabled = camera.quality.codecs.length === 0;
     profile.onchange = () => {
-      bitrate.value = profiles[profile.value].bitrate;
+      setBitrate(profiles[profile.value].bitrate);
     };
     field('Performance profile', profile);
     field('Resolution target', resolution);
@@ -213,7 +293,8 @@ function render(camera) {
       profile: profile.value,
       resolution: Number(resolution.value),
       fps: Number(fps.value),
-      bitrate: Number(bitrate.value),
+      bitrate:
+        bitrate.value === formatControlNumber(bitrateTarget) ? bitrateTarget : Number(bitrate.value),
       codec: codec.value,
     });
     const apply = document.createElement('button');
@@ -232,7 +313,7 @@ function render(camera) {
       const suggested = lowNoiseTarget(Number(resolution.value));
       profile.value = suggested.profile;
       fps.value = String(suggested.fps);
-      bitrate.value = suggested.bitrate;
+      setBitrate(suggested.bitrate);
       document.getElementById('status').textContent =
         'Low Noise targets loaded. Add light and press Apply.';
     };
@@ -265,7 +346,7 @@ function render(camera) {
         profile.value = saved.profile;
         resolution.value = String(saved.resolution);
         fps.value = String(saved.fps);
-        bitrate.value = saved.bitrate;
+        setBitrate(saved.bitrate);
         codec.value = saved.codec;
         note.textContent = 'Preset loaded. Press Apply quality targets to request it.';
       } catch (error) {
@@ -294,6 +375,10 @@ function render(camera) {
   for (const name of [...numericControls, ...modeControls, 'torch']) {
     const cap = camera.capabilities[name],
       supported = controlSupported(camera.capabilities, name);
+    if (numericControls.includes(name)) {
+      numericField(name, cap, s[name], supported);
+      continue;
+    }
     let input;
     if (modeControls.includes(name)) {
       input = document.createElement('select');
@@ -301,28 +386,14 @@ function render(camera) {
       input.value = s[name] ?? input.value;
     } else {
       input = document.createElement('input');
-      input.type = name === 'torch' ? 'checkbox' : 'number';
-      if (name === 'torch') input.checked = Boolean(s[name]);
-      else if (supported) {
-        input.min = cap.min;
-        input.max = cap.max;
-        input.step = cap.step ?? 'any';
-        input.value = s[name] ?? cap.min;
-      }
+      input.type = 'checkbox';
+      input.checked = Boolean(s[name]);
     }
     input.disabled = !supported;
     input.title = supported
       ? `Actual: ${s[name] ?? 'not reported'}`
       : 'Not exposed by this camera/browser';
-    input.onchange = () =>
-      command(
-        name,
-        name === 'torch'
-          ? input.checked
-          : modeControls.includes(name)
-            ? input.value
-            : Number(input.value),
-      );
+    input.onchange = () => command(name, name === 'torch' ? input.checked : input.value);
     field(names[name], input);
   }
   const mic = document.createElement('input');

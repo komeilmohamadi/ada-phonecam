@@ -58,3 +58,37 @@ button:disabled {
   border: 1px solid #425069;
   border-radius: 8px;
 }
+
+.numeric-control {
+  display: flex;
+  flex: 1 1 190px;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+#controls .numeric-control label {
+  min-width: 0;
+  flex: none;
+}
+.numeric-step-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.numeric-step-row button {
+  flex: 0 0 32px;
+  margin: 0;
+}
+.numeric-step-row .camera-number {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+}
+.camera-number::-webkit-inner-spin-button,
+.camera-number::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}

@@ -22,7 +22,7 @@ export function installDiagnostics(video) {
     const { mbps, rtt } = event.detail;
     const suggestion = recommendNetwork(mbps);
     if (!suggestion) return;
-    network.textContent = `LAN upload sample: ${mbps.toFixed(1)} Mbps | Probe RTT: ${rtt} ms. Suggested starting targets: ${suggestion.resolution}p, ${suggestion.fps} FPS, ${suggestion.bitrate} Mbps. Short test, not a sustained guarantee.`;
+    network.textContent = `LAN upload sample: ${mbps.toFixed(1)} Mbps | Probe RTT: ${Number.isFinite(rtt) ? rtt.toFixed(1) : 'N/A'} ms. Suggested starting targets: ${suggestion.resolution}p, ${suggestion.fps} FPS, ${suggestion.bitrate} Mbps. Short test, not a sustained guarantee.`;
   };
   const reset = () => {
     network.textContent = 'Waiting for a new phone connection and LAN upload test.';
