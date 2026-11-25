@@ -75,6 +75,12 @@ test('pairing is single-use, role-limited, revocable, and origin checked', async
     description: { type: 'offer', sdp: 'test payload' },
   });
   assert.equal((await receive(admin, 'offer')).epoch, 'session');
+  send(admin, { type: 'control', cameraId: 'active', name: 'zoom', value: 2 });
+  assert.equal((await receive(phone, 'control')).value, 2);
+  send(phone, { type: 'control-result', ok: true, message: 'confirmed' });
+  assert.equal((await receive(admin, 'control-result')).ok, true);
+  send(phone, { type: 'capabilities', camera: { id: 'active' } });
+  assert.equal((await receive(admin, 'capabilities')).camera.id, 'active');
   const replay = await connect();
   const replayClosed = new Promise((r) => replay.once('close', r));
   send(replay, { type: 'hello', role: 'phone', token });

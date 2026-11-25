@@ -42,3 +42,7 @@ Phone capture, QR pairing, WebRTC media, OBS, image quality, frame rate, thermal
 ## Stage 2
 
 Nine automated tests passed, including TLS-backed WebSocket pairing, origin rejection, bad-token rejection, one-use token replay rejection, offer forwarding, and revocation. npm audit reported zero known vulnerabilities. Real phone media and browser playback remain unverified; see STREAMING.md.
+
+## Stage 3
+
+Twelve automated tests passed. New tests check rejection of unsupported/out-of-range camera requests, preservation of existing constraints, manual-focus mode selection, exact FPS constraints, and detection of silently ignored settings. WebSocket tests also exercise control, acknowledgement, and capability forwarding. Camera tests use track doubles to test application logic; they do not validate physical Android hardware. Browser layout, real video/audio playback, camera switching, and actual camera settings still require a trusted phone session.

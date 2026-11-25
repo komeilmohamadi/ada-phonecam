@@ -2,7 +2,7 @@
 
 Turn an Android phone into a high-quality webcam for OBS over a local network.
 
-**Current release: stage 2 of 8.** Includes the HTTPS foundation, temporary QR pairing, a phone capture page, and direct WebRTC video with optional microphone audio. Open `/studio` through localhost on the computer. See [streaming setup and validation limits](docs/STREAMING.md). Real Android playback remains a required device test. OBS clean feed belongs to stage 5.
+**Current release: stage 3 of 8.** Includes the HTTPS foundation, temporary QR pairing, a phone capture page, direct WebRTC video with optional microphone audio, and capability-driven remote camera controls. Open `/studio` through localhost on the computer. See [streaming setup and validation limits](docs/STREAMING.md) and [camera controls](docs/CAMERA-CONTROLS.md). Real Android playback and physical camera changes remain required device tests. OBS clean feed belongs to stage 5.
 
 ## Requirements
 

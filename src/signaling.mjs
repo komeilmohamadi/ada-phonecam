@@ -113,8 +113,8 @@ export function attachSignaling(server, getHosts, getUrls) {
           }
           const allowed =
             role === 'phone'
-              ? ['offer', 'candidate', 'stopped', 'error']
-              : ['answer', 'candidate', 'stop'];
+              ? ['offer', 'candidate', 'stopped', 'error', 'capabilities', 'control-result']
+              : ['answer', 'candidate', 'stop', 'control'];
           if (!allowed.includes(m.type)) return;
           send(role === 'phone' ? controller : phone, m);
         } catch {

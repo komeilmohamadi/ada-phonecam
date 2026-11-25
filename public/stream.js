@@ -81,6 +81,7 @@ export async function capture(
     height: { ideal: 1080 },
     frameRate: { ideal: 60 },
   },
+  microphoneEnabled = true,
 ) {
   stopMedia();
   const generation = captureGeneration;
@@ -93,6 +94,9 @@ export async function capture(
     throw new Error('Connection lost. Pair again before starting.');
   }
   media = acquired;
+  media.getAudioTracks().forEach((track) => {
+    track.enabled = microphoneEnabled;
+  });
   $('video').srcObject = media;
   media.getVideoTracks()[0].onended = () => {
     stopMedia();
@@ -166,6 +170,7 @@ function connect() {
       .catch((error) => status(error.message));
   };
   ws.onclose = (event) => {
+    window.dispatchEvent(new CustomEvent('signalmessage', { detail: { type: 'left' } }));
     stopMedia();
     $('start').disabled = true;
     status(event.reason || 'Signaling disconnected. Reconnecting...');
