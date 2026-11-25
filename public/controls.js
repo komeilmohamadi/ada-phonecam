@@ -198,7 +198,11 @@ function render(camera) {
     field('Performance profile', profile);
     field('Resolution target', resolution);
     const orientation = select(
-      [['keep', 'Keep current orientation'], ['landscape', 'Landscape'], ['portrait', 'Portrait']],
+      [
+        ['keep', 'Keep current orientation'],
+        ['landscape', 'Landscape'],
+        ['portrait', 'Portrait'],
+      ],
       'keep',
     );
     field('Capture orientation (requested)', orientation);
@@ -229,7 +233,8 @@ function render(camera) {
       profile.value = suggested.profile;
       fps.value = String(suggested.fps);
       bitrate.value = suggested.bitrate;
-      document.getElementById('status').textContent = 'Low Noise targets loaded. Add light and press Apply.';
+      document.getElementById('status').textContent =
+        'Low Noise targets loaded. Add light and press Apply.';
     };
     container.append(lowNoise);
     const preset = document.createElement('div');
@@ -342,9 +347,16 @@ if (isPhone) {
     if (!track) return;
     const selected = phoneSelector.value;
     phoneSelector.disabled = true;
-    commands = commands.then(() => execute({
-      cameraId: track.id, name: 'deviceId', value: selected, requestId: crypto.randomUUID(),
-    })).catch(() => report().catch(() => {}));
+    commands = commands
+      .then(() =>
+        execute({
+          cameraId: track.id,
+          name: 'deviceId',
+          value: selected,
+          requestId: crypto.randomUUID(),
+        }),
+      )
+      .catch(() => report().catch(() => {}));
   };
   navigator.mediaDevices?.addEventListener('devicechange', () => report().catch(() => {}));
   window.addEventListener('capturechange', () => {

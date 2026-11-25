@@ -19,7 +19,7 @@ function camera(overrides = {}) {
       constraints = value;
       settings = {
         ...settings,
-        ...value.advanced?.[0],
+        ...Object.assign({}, ...(value.advanced ?? [])),
         ...(value.frameRate ? { frameRate: value.frameRate.exact } : {}),
       };
     },
@@ -50,7 +50,12 @@ test('image controls preserve capture constraints and select manual focus when a
   assert.equal(result.verified, true);
   assert.deepEqual(track.getConstraints().width, { ideal: 1920 });
   assert.equal(track.getConstraints().advanced[0].focusMode, 'manual');
-  assert.equal(track.getConstraints().advanced[0].torch, false);
+  assert.deepEqual(track.getConstraints().advanced[1], { torch: false });
+  assert.equal(track.getSettings().torch, false);
+  assert.equal((await applyCameraControl(track, 'torch', true)).verified, true);
+  assert.equal((await applyCameraControl(track, 'focusDistance', 4)).verified, true);
+  assert.deepEqual(track.getConstraints().advanced[1], { torch: true });
+  assert.equal(track.getSettings().torch, true);
 });
 test('FPS requests use exact constraints; silently ignored values are not reported as verified', async () => {
   const track = camera();

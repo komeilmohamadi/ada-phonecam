@@ -42,9 +42,13 @@ export function installDiagnostics(video) {
       light.textContent = 'Brightness sampling unavailable.';
     }
   }, 3000);
-  window.addEventListener('pagehide', () => {
-    clearInterval(timer);
-    window.removeEventListener('ada-lan-result', result);
-    window.removeEventListener('ada-lan-reset', reset);
-  }, { once: true });
+  window.addEventListener(
+    'pagehide',
+    () => {
+      clearInterval(timer);
+      window.removeEventListener('ada-lan-result', result);
+      window.removeEventListener('ada-lan-reset', reset);
+    },
+    { once: true },
+  );
 }

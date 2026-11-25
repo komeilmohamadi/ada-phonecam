@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { listedCameras, lowNoiseTarget, luminanceSummary, orientedTargets, qualityConstraints, recommendNetwork } from '../public/camera-tuning.js';
+import {
+  listedCameras,
+  lowNoiseTarget,
+  luminanceSummary,
+  orientedTargets,
+  qualityConstraints,
+  recommendNetwork,
+} from '../public/camera-tuning.js';
 
 const q = { resolution: 1080, fps: 60 };
 test('orientation follows reported dimensions unless explicitly requested', () => {
@@ -10,13 +17,32 @@ test('orientation follows reported dimensions unless explicitly requested', () =
   assert.throws(() => orientedTargets(q, {}, 'invalid'));
 });
 test('bitrate-only requests do not touch camera constraints', () => {
-  const track = { getSettings: () => ({ width: 720, height: 1280 }), getConstraints: () => ({ advanced: [{ torch: true }] }) };
+  const track = {
+    getSettings: () => ({ width: 720, height: 1280 }),
+    getConstraints: () => ({ advanced: [{ torch: true }] }),
+  };
   assert.equal(qualityConstraints(track, q, { ...q, bitrate: 25 }), null);
-  assert.deepEqual(qualityConstraints(track, q, { ...q, fps: 30 }), { advanced: [{ torch: true }], frameRate: { ideal: 30, max: 30 } });
+  assert.deepEqual(qualityConstraints(track, q, { ...q, fps: 30 }), {
+    advanced: [{ torch: true }],
+    frameRate: { ideal: 30, max: 30 },
+  });
   assert.equal(qualityConstraints(track, q, { ...q, resolution: 2160 }).height.ideal, 3840);
 });
 test('camera list deduplicates exposed ids and retains the active camera', () => {
-  assert.deepEqual(listedCameras([{ kind: 'videoinput', deviceId: 'a' }, { kind: 'videoinput', deviceId: 'a' }, { kind: 'audioinput', deviceId: 'b' }], { deviceId: 'c' }), [{ id: 'a', label: 'Camera 1' }, { id: 'c', label: 'Current camera' }]);
+  assert.deepEqual(
+    listedCameras(
+      [
+        { kind: 'videoinput', deviceId: 'a' },
+        { kind: 'videoinput', deviceId: 'a' },
+        { kind: 'audioinput', deviceId: 'b' },
+      ],
+      { deviceId: 'c' },
+    ),
+    [
+      { id: 'a', label: 'Camera 1' },
+      { id: 'c', label: 'Current camera' },
+    ],
+  );
 });
 test('noise preset and LAN recommendations are bounded targets', () => {
   assert.deepEqual(lowNoiseTarget(2160), { profile: 'quality', fps: 30, bitrate: 40 });
@@ -46,9 +72,15 @@ test('torch accepts boolean support and preserves unrelated image controls', asy
       current = value.advanced.find((entry) => 'torch' in entry).torch;
     },
   };
-  assert.deepEqual(await applyCameraControl(track, 'torch', true), { actual: true, verified: true });
+  assert.deepEqual(await applyCameraControl(track, 'torch', true), {
+    actual: true,
+    verified: true,
+  });
   assert.deepEqual(constraints.advanced, [{ zoom: 2 }, { torch: true }]);
-  assert.deepEqual(await applyCameraControl(track, 'torch', false), { actual: false, verified: true });
+  assert.deepEqual(await applyCameraControl(track, 'torch', false), {
+    actual: false,
+    verified: true,
+  });
 });
 
 test('torch fallback confirms only the reported hardware state', async () => {
@@ -59,9 +91,14 @@ test('torch fallback confirms only the reported hardware state', async () => {
     getCapabilities: () => ({ torch: [true, false] }),
     getConstraints: () => ({}),
     getSettings: () => ({ torch: false }),
-    async applyConstraints() { calls++; },
+    async applyConstraints() {
+      calls++;
+    },
   };
-  assert.deepEqual(await applyCameraControl(track, 'torch', true), { actual: false, verified: false });
+  assert.deepEqual(await applyCameraControl(track, 'torch', true), {
+    actual: false,
+    verified: false,
+  });
   assert.equal(calls, 2);
 });
 
@@ -69,7 +106,13 @@ test('LAN receiver reports only a complete bounded transfer', async () => {
   const { receiveLanProbe } = await import('../public/lan-probe.js');
   const messages = [];
   const results = [];
-  const channel = { label: 'ada-lan-probe-v1', send: (value) => messages.push(value), close() { this.onclose?.(); } };
+  const channel = {
+    label: 'ada-lan-probe-v1',
+    send: (value) => messages.push(value),
+    close() {
+      this.onclose?.();
+    },
+  };
   receiveLanProbe(channel, (result) => results.push(result));
   channel.onmessage({ data: 'ping' });
   channel.onmessage({ data: 'start:10' });
