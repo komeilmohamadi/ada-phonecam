@@ -37,8 +37,8 @@ try {
   });
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
-  console.log(`Ada PhoneCam 0.5.0 is listening at https://localhost:${config.port}`);
-  console.log('Stage 5: local clean feed and OBS window capture.');
+  console.log(`Ada PhoneCam 0.6.0 is listening at https://localhost:${config.port}`);
+  console.log('Stage 6: monitoring, media recovery, and optional OBS camera bridge.');
   console.log(
     'Install the local CA certificate before using HTTPS from a phone. See docs/HTTPS.md.',
   );

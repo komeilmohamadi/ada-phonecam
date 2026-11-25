@@ -48,3 +48,13 @@ button:disabled {
   font-size: 12px;
   color: #91a0b9;
 }
+
+#history-graph {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  background: #101723;
+  border: 1px solid #425069;
+  border-radius: 8px;
+}

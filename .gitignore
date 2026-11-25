@@ -20,3 +20,6 @@ Thumbs.db
 .ada-upgrader/updates/
 .ada-upgrader/history.log
 .ada-upgrader/lock/
+
+# Downloaded update packages are not source files
+*.ada-update

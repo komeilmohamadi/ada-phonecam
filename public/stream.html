@@ -9,6 +9,7 @@
     <script type="module" src="/stream.js"></script>
     <script type="module" src="/controls.js"></script>
     <script type="module" src="/studio-feed.js"></script>
+    <script type="module" src="/stability.js"></script>
   </head>
   <body>
     <main class="shell">
@@ -56,6 +57,16 @@
         <label><input id="feed-audio" type="checkbox" /> Enable clean feed audio</label>
         <p id="feed-status" role="status">Open the clean feed for OBS Window Capture.</p>
         <p>In the feed window, double-click or press F for fullscreen.</p>
+      </section>
+      <section id="monitor" aria-label="Connection monitoring">
+        <h2>Connection monitoring</h2>
+        <p id="network-metrics">Waiting for video statistics.</p>
+        <canvas id="history-graph" width="640" height="180" aria-label="FPS and bitrate history"></canvas>
+        <p id="recovery-status">Automatic media recovery is managed by the phone.</p>
+        <div id="wake-controls" hidden>
+          <label><input id="wake-enabled" type="checkbox" checked /> Keep phone screen awake</label>
+          <p id="wake-status">Screen lock inactive.</p>
+        </div>
       </section>
       <section id="controls"></section>
     </main>

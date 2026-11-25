@@ -2,7 +2,7 @@
 
 Turn an Android phone into a high-quality webcam for OBS over a local network.
 
-**Current release: stage 5 of 8.** Includes the HTTPS foundation, temporary QR pairing, a phone capture page, direct WebRTC video with optional microphone audio, capability-driven remote camera controls, and configurable video quality targets. Open `/studio` through localhost on the computer. See [streaming setup and validation limits](docs/STREAMING.md) and [camera controls](docs/CAMERA-CONTROLS.md). Real Android playback and physical camera changes remain required device tests. See [quality and latency](docs/QUALITY.md). Open the clean feed from the studio for OBS Window Capture; see [OBS setup](docs/OBS.md). Direct OBS Browser Source is not supported by this shared-stream path.
+**Current release: stage 6 of 8.** Includes the HTTPS foundation, temporary QR pairing, a phone capture page, direct WebRTC video with optional microphone audio, capability-driven remote camera controls, and configurable video quality targets. Open `/studio` through localhost on the computer. See [streaming setup and validation limits](docs/STREAMING.md) and [camera controls](docs/CAMERA-CONTROLS.md). Real Android playback and physical camera changes remain required device tests. See [quality and latency](docs/QUALITY.md). Open the clean feed from the studio for OBS Window Capture; see [OBS setup](docs/OBS.md). Direct OBS Browser Source is not supported by this shared-stream path. See [monitoring and recovery](docs/STABILITY.md) and the [experimental named Windows camera bridge](docs/VIRTUAL-CAMERA.md), which requires OBS.
 
 ## Requirements
 

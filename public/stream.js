@@ -9,6 +9,7 @@ import {
   validateQuality,
   videoStats,
 } from './quality.js';
+import { signalRetryDelay } from './monitor.js';
 
 const phone = location.pathname === '/phone';
 const $ = (id) => document.getElementById(id);
@@ -22,7 +23,9 @@ let ws,
   queue = [],
   chain = Promise.resolve(),
   retry,
-  closed = false;
+  closed = false,
+  authenticated = false,
+  retryAttempt = 0;
 const status = (text) => {
   $('status').textContent = text;
 };
@@ -102,12 +105,21 @@ async function refreshStats() {
     const m = result.metrics;
     if (!m) {
       metrics.textContent = 'Waiting for video RTP statistics.';
+      window.dispatchEvent(new Event('ada-stats-reset'));
       return;
     }
+    window.dispatchEvent(
+      new CustomEvent('ada-stats', {
+        detail: { report, direction: phone ? 'outbound' : 'inbound', ...result },
+      }),
+    );
     const format = (v, digits = 0) => (v === null ? 'N/A' : v.toFixed(digits));
     metrics.textContent = `${phone ? 'Sending' : 'Receiving'}: ${format(m.width)} x ${format(m.height)} | ${format(m.fps, 1)} FPS | ${format(m.mbps, 2)} Mbps | ${m.codec ?? 'N/A'}${phone ? ` | Limit: ${m.limitation ?? 'N/A'} | ${senderStatus} ${codecStatus}` : ` | Dropped frames: ${format(m.dropped)}`}`;
   } catch {
-    if (current === pc) metrics.textContent = 'Video statistics unavailable.';
+    if (current === pc) {
+      metrics.textContent = 'Video statistics unavailable.';
+      window.dispatchEvent(new Event('ada-stats-reset'));
+    }
   } finally {
     statsBusy = false;
   }
@@ -116,10 +128,13 @@ const statsTimer = setInterval(refreshStats, 1000);
 function resetPeer() {
   if (pc) {
     pc.onconnectionstatechange = null;
+    pc.onicecandidate = null;
+    pc.ontrack = null;
     pc.close();
   }
   pc = null;
   previousStats = null;
+  window.dispatchEvent(new Event('ada-stats-reset'));
   metrics.textContent = 'Waiting for WebRTC video statistics.';
   queue = [];
   if (!phone) $('video').srcObject = null;
@@ -148,6 +163,7 @@ function peer(id) {
     }
   };
   current.ontrack = (event) => {
+    if (current !== pc) return;
     $('video').srcObject = event.streams[0];
     $('video')
       .play()
@@ -158,10 +174,11 @@ function peer(id) {
     status(`Media: ${current.connectionState}`);
     if (current.connectionState !== 'connected') {
       previousStats = null;
+      window.dispatchEvent(new Event('ada-stats-reset'));
       metrics.textContent = `Media: ${current.connectionState}. No current video statistics.`;
     }
     if (current.connectionState === 'failed')
-      status('Media connection failed. Stop and start the camera to retry.');
+      status('Media connection failed. The phone may attempt bounded recovery.');
   };
   return current;
 }
@@ -195,6 +212,21 @@ export async function offer() {
   });
   current.descriptionSent = true;
   current.pendingCandidates.splice(0).forEach(send);
+}
+export async function recoverMedia(current) {
+  if (
+    !phone ||
+    closed ||
+    !authenticated ||
+    ws?.readyState !== WebSocket.OPEN ||
+    current !== pc ||
+    !media?.getVideoTracks().some((track) => track.readyState === 'live') ||
+    !['failed', 'disconnected', 'connecting', 'new'].includes(current.connectionState)
+  ) {
+    return false;
+  }
+  await offer();
+  return true;
 }
 export async function capture(
   videoConstraints = {
@@ -233,6 +265,8 @@ export async function capture(
 async function message(m) {
   if (m.type === 'network-changed' && !phone && !m.paired) send({ type: 'pair' });
   if (m.type === 'authenticated') {
+    authenticated = true;
+    retryAttempt = 0;
     if (phone) {
       token = m.resume;
       $('start').disabled = false;
@@ -302,22 +336,36 @@ async function message(m) {
   window.dispatchEvent(new CustomEvent('signalmessage', { detail: m }));
 }
 function connect() {
-  ws = new WebSocket(`wss://${location.host}/signal`);
-  ws.onopen = () => send({ type: 'hello', role: phone ? 'phone' : 'controller', token });
-  ws.onmessage = (event) => {
+  if (closed) return;
+  authenticated = false;
+  const socket = new WebSocket(`wss://${location.host}/signal`);
+  ws = socket;
+  socket.onopen = () => {
+    if (socket === ws && !closed) send({ type: 'hello', role: phone ? 'phone' : 'controller', token });
+  };
+  socket.onmessage = (event) => {
     chain = chain
-      .then(() => message(JSON.parse(event.data)))
+      .then(() => {
+        if (socket === ws && !closed && socket.readyState === WebSocket.OPEN)
+          return message(JSON.parse(event.data));
+      })
       .catch((error) => status(error.message));
   };
-  ws.onclose = (event) => {
+  socket.onclose = (event) => {
+    if (socket !== ws) return;
+    authenticated = false;
     window.dispatchEvent(new CustomEvent('signalmessage', { detail: { type: 'left' } }));
     stopMedia();
     $('start').disabled = true;
     status(event.reason || 'Signaling disconnected. Reconnecting...');
-    if (!closed && ![4001, 4003, 4008].includes(event.code)) retry = setTimeout(connect, 2000);
+    if (!closed && ![4001, 4003, 4008].includes(event.code)) {
+      retry = setTimeout(connect, signalRetryDelay(retryAttempt++));
+    }
   };
-  ws.onerror = () =>
-    status('Cannot connect. Check HTTPS trust and use localhost for the computer studio.');
+  socket.onerror = () => {
+    if (socket === ws && !closed)
+      status('Cannot connect. Check HTTPS trust and use localhost for the computer studio.');
+  };
 }
 $('title').textContent = phone ? 'Your phone camera' : 'Camera studio';
 $('pairing').hidden = phone;

@@ -54,3 +54,7 @@ Quality helper tests cover target validation, codec preference ordering, sender 
 ## Stage 5
 
 The clean feed uses the existing incoming MediaStream in a same-origin window. Unit tests cover settings validation, window authorization, live-stream selection, and audio policy. Real browser window capture, OBS audio routing, fullscreen, visual transforms, and end-to-end latency must still be checked on the host. See OBS.md.
+
+## Stage 6
+
+Monitoring helper tests exercise selected candidate-pair RTT, jitter and packet loss, missing counters, bounded history, recovery delays, and Wake Lock eligibility. Device recovery, Android power behavior, long sessions, and virtual camera registration and enumeration on Windows require host validation. See STABILITY.md and VIRTUAL-CAMERA.md.
