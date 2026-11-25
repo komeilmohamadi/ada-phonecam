@@ -63,11 +63,7 @@ export function parseControlNumber(name, cap, text) {
   const min = Number(formatControlNumber(cap.min, name));
   const max = Number(formatControlNumber(cap.max, name));
   const requested =
-    value < cap.min && value === min
-      ? cap.min
-      : value > cap.max && value === max
-        ? cap.max
-        : value;
+    value < cap.min && value === min ? cap.min : value > cap.max && value === max ? cap.max : value;
   return normalizeControlNumber(cap, requested);
 }
 

@@ -116,7 +116,7 @@ async function execute(m) {
       const actual =
         typeof result.actual === 'number'
           ? formatControlNumber(result.actual, m.name) || 'not reported'
-          : result.actual ?? 'not reported';
+          : (result.actual ?? 'not reported');
       message = result.verified
         ? 'Camera confirmed the requested value.'
         : `Requested value was not confirmed. Actual: ${actual}.`;
@@ -294,7 +294,9 @@ function render(camera) {
       resolution: Number(resolution.value),
       fps: Number(fps.value),
       bitrate:
-        bitrate.value === formatControlNumber(bitrateTarget) ? bitrateTarget : Number(bitrate.value),
+        bitrate.value === formatControlNumber(bitrateTarget)
+          ? bitrateTarget
+          : Number(bitrate.value),
       codec: codec.value,
     });
     const apply = document.createElement('button');
