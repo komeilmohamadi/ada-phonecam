@@ -1,4 +1,12 @@
-import { isPhone, getMedia, capture, stopMedia, send, getQuality, changeQuality } from './stream.js';
+import {
+  isPhone,
+  getMedia,
+  capture,
+  stopMedia,
+  send,
+  getQuality,
+  changeQuality,
+} from './stream.js';
 import { profiles, resolutions } from './quality.js';
 import {
   numericControls,
@@ -144,18 +152,35 @@ function render(camera) {
       el.value = String(selected);
       return el;
     };
-    const profile = select(Object.entries(profiles).map(([key, p]) => [key, p.label]), q.profile);
-    const resolution = select(Object.keys(resolutions).map((v) => [v, v === '2160' ? '4K UHD' : `${v}p`]), q.resolution);
-    const fps = select([[30, '30 FPS'], [60, '60 FPS']], q.fps);
+    const profile = select(
+      Object.entries(profiles).map(([key, p]) => [key, p.label]),
+      q.profile,
+    );
+    const resolution = select(
+      Object.keys(resolutions).map((v) => [v, v === '2160' ? '4K UHD' : `${v}p`]),
+      q.resolution,
+    );
+    const fps = select(
+      [
+        [30, '30 FPS'],
+        [60, '60 FPS'],
+      ],
+      q.fps,
+    );
     const bitrate = document.createElement('input');
     bitrate.type = 'number';
     bitrate.min = '1';
     bitrate.max = '150';
     bitrate.step = '0.5';
     bitrate.value = q.bitrate;
-    const codec = select([['auto', 'Automatic'], ...camera.quality.codecs.map((c) => [c, c])], q.codec);
+    const codec = select(
+      [['auto', 'Automatic'], ...camera.quality.codecs.map((c) => [c, c])],
+      q.codec,
+    );
     codec.disabled = camera.quality.codecs.length === 0;
-    profile.onchange = () => { bitrate.value = profiles[profile.value].bitrate; };
+    profile.onchange = () => {
+      bitrate.value = profiles[profile.value].bitrate;
+    };
     field('Performance profile', profile);
     field('Resolution target', resolution);
     field('Frame rate target', fps);
@@ -164,8 +189,17 @@ function render(camera) {
     const apply = document.createElement('button');
     apply.textContent = 'Apply quality targets';
     apply.onclick = () => {
-      if (!bitrate.checkValidity() || !bitrate.value) { bitrate.reportValidity(); return; }
-      command('quality', { profile: profile.value, resolution: Number(resolution.value), fps: Number(fps.value), bitrate: Number(bitrate.value), codec: codec.value });
+      if (!bitrate.checkValidity() || !bitrate.value) {
+        bitrate.reportValidity();
+        return;
+      }
+      command('quality', {
+        profile: profile.value,
+        resolution: Number(resolution.value),
+        fps: Number(fps.value),
+        bitrate: Number(bitrate.value),
+        codec: codec.value,
+      });
     };
     container.append(apply);
     const qualityNote = document.createElement('p');

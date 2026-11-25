@@ -31,7 +31,10 @@ test('quality defaults and invalid remote requests are validated', () => {
   ]) {
     assert.throws(() => validateQuality({ ...defaultQuality, ...overrides }));
   }
-  const high = validateQuality({ ...defaultQuality, resolution: 2160, bitrate: 150, codec: 'AV1' }, ['AV1']);
+  const high = validateQuality(
+    { ...defaultQuality, resolution: 2160, bitrate: 150, codec: 'AV1' },
+    ['AV1'],
+  );
   assert.equal(captureTargets(high).width.ideal, 3840);
 });
 
@@ -44,7 +47,15 @@ test('codec discovery intersects capabilities and preference preserves repair/fa
   const sender = { getCapabilities: () => ({ codecs: [vp8, h264, rtx] }) };
   assert.deepEqual(availableCodecs(sender, receiver), ['H264', 'VP8']);
   let order;
-  preferCodec({ setCodecPreferences: (codecs) => { order = codecs; } }, 'H264', receiver);
+  preferCodec(
+    {
+      setCodecPreferences: (codecs) => {
+        order = codecs;
+      },
+    },
+    'H264',
+    receiver,
+  );
   assert.deepEqual(order, [h264, vp8, rtx, av1]);
   assert.throws(() => preferCodec({}, 'H264', receiver));
   assert.throws(() => preferCodec({ setCodecPreferences() {} }, 'VP9', receiver));
@@ -55,23 +66,47 @@ test('bitrate limits are sent in bits per second and checked separately from opt
   let parameters = { encodings: [{}] };
   const sender = {
     getParameters: () => structuredClone(parameters),
-    setParameters: async (value) => { parameters = structuredClone(value); },
-  };
-  const result = await configureSender(sender, { ...defaultQuality, profile: 'latency', bitrate: 8 });
-  assert.equal(parameters.encodings[0].maxBitrate, 8000000);
-  assert.deepEqual(result, { confirmed: true, policy: 'maintain-framerate' });
-  const ignored = await configureSender({ ...sender, setParameters: async () => {} }, defaultQuality);
-  assert.equal(ignored.confirmed, false);
-  await assert.rejects(configureSender({ ...sender, getParameters: () => ({ encodings: [] }) }, defaultQuality));
-  await assert.rejects(configureSender({ ...sender, setParameters: async () => { throw Error('rejected'); } }, defaultQuality));
-  parameters = { encodings: [{}] };
-  const partial = await configureSender({
-    ...sender,
     setParameters: async (value) => {
-      if (value.degradationPreference) throw Error('policy unsupported');
       parameters = structuredClone(value);
     },
-  }, { ...defaultQuality, bitrate: 8 });
+  };
+  const result = await configureSender(sender, {
+    ...defaultQuality,
+    profile: 'latency',
+    bitrate: 8,
+  });
+  assert.equal(parameters.encodings[0].maxBitrate, 8000000);
+  assert.deepEqual(result, { confirmed: true, policy: 'maintain-framerate' });
+  const ignored = await configureSender(
+    { ...sender, setParameters: async () => {} },
+    defaultQuality,
+  );
+  assert.equal(ignored.confirmed, false);
+  await assert.rejects(
+    configureSender({ ...sender, getParameters: () => ({ encodings: [] }) }, defaultQuality),
+  );
+  await assert.rejects(
+    configureSender(
+      {
+        ...sender,
+        setParameters: async () => {
+          throw Error('rejected');
+        },
+      },
+      defaultQuality,
+    ),
+  );
+  parameters = { encodings: [{}] };
+  const partial = await configureSender(
+    {
+      ...sender,
+      setParameters: async (value) => {
+        if (value.degradationPreference) throw Error('policy unsupported');
+        parameters = structuredClone(value);
+      },
+    },
+    { ...defaultQuality, bitrate: 8 },
+  );
   assert.deepEqual(partial, { confirmed: true, policy: 'browser default' });
 });
 
@@ -82,7 +117,14 @@ test('optional receiver hint safely falls back and resets to the browser default
   assert.equal(receiver.jitterBufferTarget, 0);
   assert.equal(configureReceiver(receiver, 'balanced'), false);
   assert.equal(receiver.jitterBufferTarget, null);
-  const rejected = { get jitterBufferTarget() { return null; }, set jitterBufferTarget(value) { throw Error(String(value)); } };
+  const rejected = {
+    get jitterBufferTarget() {
+      return null;
+    },
+    set jitterBufferTarget(value) {
+      throw Error(String(value));
+    },
+  };
   assert.equal(configureReceiver(rejected, 'latency'), false);
 });
 
@@ -90,9 +132,41 @@ function report(timestamp, bytesReceived, framesDecoded, id = 'video') {
   return new Map([
     ['video-codec', { mimeType: 'video/H264' }],
     ['rtx-codec', { mimeType: 'video/rtx' }],
-    [id, { id, type: 'inbound-rtp', kind: 'video', timestamp, bytesReceived, framesDecoded, codecId: 'video-codec', frameWidth: 1920, frameHeight: 1080 }],
-    ['rtx', { id: 'rtx', type: 'inbound-rtp', kind: 'video', timestamp, bytesReceived: bytesReceived * 10, codecId: 'rtx-codec' }],
-    ['audio', { id: 'audio', type: 'inbound-rtp', kind: 'audio', timestamp, bytesReceived: bytesReceived * 20 }],
+    [
+      id,
+      {
+        id,
+        type: 'inbound-rtp',
+        kind: 'video',
+        timestamp,
+        bytesReceived,
+        framesDecoded,
+        codecId: 'video-codec',
+        frameWidth: 1920,
+        frameHeight: 1080,
+      },
+    ],
+    [
+      'rtx',
+      {
+        id: 'rtx',
+        type: 'inbound-rtp',
+        kind: 'video',
+        timestamp,
+        bytesReceived: bytesReceived * 10,
+        codecId: 'rtx-codec',
+      },
+    ],
+    [
+      'audio',
+      {
+        id: 'audio',
+        type: 'inbound-rtp',
+        kind: 'audio',
+        timestamp,
+        bytesReceived: bytesReceived * 20,
+      },
+    ],
   ]);
 }
 
@@ -106,14 +180,32 @@ test('RTP statistics use real counter deltas, exclude repair/audio and reset on 
   assert.equal(second.metrics.width, 1920);
   assert.equal(second.metrics.codec, 'video/H264');
   assert.equal(videoStats(report(3000, 1, 1), 'inbound', second.sample).metrics.mbps, null);
-  assert.equal(videoStats(report(3000, 5000000, 180, 'new-video'), 'inbound', second.sample).metrics.mbps, null);
+  assert.equal(
+    videoStats(report(3000, 5000000, 180, 'new-video'), 'inbound', second.sample).metrics.mbps,
+    null,
+  );
   assert.equal(videoStats(new Map(), 'inbound', second.sample).metrics, null);
 });
 
 test('outbound stats report encoder limitation and native FPS without inventing unavailable fields', () => {
-  const result = videoStats(new Map([
-    ['out', { id: 'out', type: 'outbound-rtp', kind: 'video', timestamp: 1000, bytesSent: 100, framesEncoded: 1, framesPerSecond: 29.5, qualityLimitationReason: 'cpu' }],
-  ]), 'outbound');
+  const result = videoStats(
+    new Map([
+      [
+        'out',
+        {
+          id: 'out',
+          type: 'outbound-rtp',
+          kind: 'video',
+          timestamp: 1000,
+          bytesSent: 100,
+          framesEncoded: 1,
+          framesPerSecond: 29.5,
+          qualityLimitationReason: 'cpu',
+        },
+      ],
+    ]),
+    'outbound',
+  );
   assert.equal(result.metrics.fps, 29.5);
   assert.equal(result.metrics.limitation, 'cpu');
   assert.equal(result.metrics.codec, null);

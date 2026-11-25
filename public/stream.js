@@ -1,6 +1,13 @@
 import {
-  availableCodecs, captureTargets, configureReceiver, configureSender, defaultQuality,
-  preferCodec, setHint, validateQuality, videoStats,
+  availableCodecs,
+  captureTargets,
+  configureReceiver,
+  configureSender,
+  defaultQuality,
+  preferCodec,
+  setHint,
+  validateQuality,
+  videoStats,
 } from './quality.js';
 
 const phone = location.pathname === '/phone';
@@ -25,16 +32,25 @@ export const send = (data) => {
 export const getMedia = () => media;
 export const getPeer = () => pc;
 export const isPhone = phone;
-let quality = { ...defaultQuality }, senderStatus = 'Waiting for negotiation', codecStatus = '';
-let previousStats = null, statsBusy = false;
+let quality = { ...defaultQuality },
+  senderStatus = 'Waiting for negotiation',
+  codecStatus = '';
+let previousStats = null,
+  statsBusy = false;
 let senderQueue = Promise.resolve();
 const metrics = document.createElement('p');
 metrics.textContent = 'Waiting for WebRTC video statistics.';
-metrics.setAttribute('aria-label', phone ? 'Outgoing video statistics' : 'Incoming video statistics');
+metrics.setAttribute(
+  'aria-label',
+  phone ? 'Outgoing video statistics' : 'Incoming video statistics',
+);
 $('video').after(metrics);
 export const getQuality = () => ({
   target: { ...quality },
-  codecs: typeof globalThis.RTCRtpTransceiver?.prototype?.setCodecPreferences === 'function' ? availableCodecs() : [],
+  codecs:
+    typeof globalThis.RTCRtpTransceiver?.prototype?.setCodecPreferences === 'function'
+      ? availableCodecs()
+      : [],
   senderStatus,
   codecStatus,
 });
@@ -46,7 +62,10 @@ async function applySender(current) {
   if (!phone || current !== pc || !current?.remoteDescription) return;
   const target = quality;
   try {
-    const result = await configureSender(current.getSenders().find((s) => s.track?.kind === 'video'), target);
+    const result = await configureSender(
+      current.getSenders().find((s) => s.track?.kind === 'video'),
+      target,
+    );
     if (current !== pc || target !== quality) return;
     senderStatus = `${result.confirmed ? 'Bitrate limit accepted' : 'Bitrate limit not confirmed'}; adaptation: ${result.policy}.`;
   } catch (error) {
@@ -81,8 +100,11 @@ async function refreshStats() {
     const result = videoStats(report, phone ? 'outbound' : 'inbound', previousStats);
     previousStats = result.sample;
     const m = result.metrics;
-    if (!m) { metrics.textContent = 'Waiting for video RTP statistics.'; return; }
-    const format = (v, digits = 0) => v === null ? 'N/A' : v.toFixed(digits);
+    if (!m) {
+      metrics.textContent = 'Waiting for video RTP statistics.';
+      return;
+    }
+    const format = (v, digits = 0) => (v === null ? 'N/A' : v.toFixed(digits));
     metrics.textContent = `${phone ? 'Sending' : 'Receiving'}: ${format(m.width)} x ${format(m.height)} | ${format(m.fps, 1)} FPS | ${format(m.mbps, 2)} Mbps | ${m.codec ?? 'N/A'}${phone ? ` | Limit: ${m.limitation ?? 'N/A'} | ${senderStatus} ${codecStatus}` : ` | Dropped frames: ${format(m.dropped)}`}`;
   } catch {
     if (current === pc) metrics.textContent = 'Video statistics unavailable.';
@@ -153,7 +175,10 @@ export async function offer() {
     if (track.kind === 'video') {
       setHint(track, quality.profile);
       try {
-        preferCodec(current.getTransceivers().find((t) => t.sender === sender), quality.codec);
+        preferCodec(
+          current.getTransceivers().find((t) => t.sender === sender),
+          quality.codec,
+        );
       } catch (error) {
         codecStatus = `Codec preference not applied: ${error.message}`;
       }

@@ -4,11 +4,11 @@ Open the computer studio, pair the phone, and start capture. The quality control
 
 ## Targets and profiles
 
-| Profile | Suggested video bitrate limit | Adaptation preference | Optional hint |
-| --- | --- | --- | --- |
-| Ultra Low Latency | 8 Mbps | Maintain frame rate | Motion; request a zero receiver jitter-buffer target when exposed |
-| Balanced (default) | 12 Mbps | Balanced | Browser default |
-| Maximum Quality | 25 Mbps | Maintain resolution | Detail |
+| Profile            | Suggested video bitrate limit | Adaptation preference | Optional hint                                                     |
+| ------------------ | ----------------------------- | --------------------- | ----------------------------------------------------------------- |
+| Ultra Low Latency  | 8 Mbps                        | Maintain frame rate   | Motion; request a zero receiver jitter-buffer target when exposed |
+| Balanced (default) | 12 Mbps                       | Balanced              | Browser default                                                   |
+| Maximum Quality    | 25 Mbps                       | Maintain resolution   | Detail                                                            |
 
 The default target is 1920 x 1080 at 60 FPS. Select 480p, 720p, 1080p, 1440p or 2160p at 30/60 FPS. Capture uses ideal constraints with upper bounds, preserving other camera constraints. An actual phone may return smaller dimensions or fewer frames; independent width/height/FPS limits do not establish support for every combination. Hold the phone in landscape for these landscape targets. Individual camera controls remain available for more specific adjustments.
 
