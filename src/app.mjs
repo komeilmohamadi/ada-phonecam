@@ -8,6 +8,11 @@ import { discoverNetwork, isLocalAddress, isLoopback } from './network.mjs';
 import { projectRoot } from './config.mjs';
 
 const assets = new Map([
+  ['/view', ['view.html', 'text/html; charset=utf-8']],
+  ['/view.js', ['view.js', 'text/javascript; charset=utf-8']],
+  ['/view.css', ['view.css', 'text/css; charset=utf-8']],
+  ['/feed.js', ['feed.js', 'text/javascript; charset=utf-8']],
+  ['/studio-feed.js', ['studio-feed.js', 'text/javascript; charset=utf-8']],
   ['/quality.js', ['quality.js', 'text/javascript; charset=utf-8']],
   ['/controls.js', ['controls.js', 'text/javascript; charset=utf-8']],
   ['/camera-controls.js', ['camera-controls.js', 'text/javascript; charset=utf-8']],
@@ -131,7 +136,7 @@ export async function createApplication({
     if (url.pathname === '/api/health')
       return send(response, 200, {
         app: 'ada-phonecam',
-        version: '0.4.0',
+        version: '0.5.0',
         instanceId,
         status: 'ok',
       });
@@ -139,8 +144,8 @@ export async function createApplication({
       const lanAvailable = config.host !== '127.0.0.1';
       return send(response, 200, {
         app: 'Ada PhoneCam',
-        version: '0.4.0',
-        stage: 4,
+        version: '0.5.0',
+        stage: 5,
         startedAt: startedAt.toISOString(),
         uptimeSeconds: Math.floor((Date.now() - startedAt.getTime()) / 1000),
         server: {
@@ -171,6 +176,12 @@ export async function createApplication({
     if (url.pathname === '/cert/ca.crt') {
       response.setHeader('Content-Disposition', 'attachment; filename="ada-phonecam-ca.crt"');
       return send(response, 200, certificates.ca, 'application/x-x509-ca-cert');
+    }
+    if (
+      url.pathname === '/view' &&
+      (!isLoopback(request.socket.remoteAddress) || request.headers.host !== `localhost:${port()}`)
+    ) {
+      return send(response, 403, { error: 'Clean feed requires the local computer studio.' });
     }
     const asset = assets.get(url.pathname);
     if (!asset) return send(response, 404, { error: 'Page not found.' });

@@ -50,3 +50,7 @@ Twelve automated tests passed. New tests check rejection of unsupported/out-of-r
 ## Stage 4
 
 Quality helper tests cover target validation, codec preference ordering, sender parameter acknowledgement, receiver hint fallback, and RTP statistics deltas. Android capture, real codec negotiation, actual bitrate and FPS, hardware acceleration, long-session stability, and camera-to-display latency still require device verification. See QUALITY.md for the manual test procedure.
+
+## Stage 5
+
+The clean feed uses the existing incoming MediaStream in a same-origin window. Unit tests cover settings validation, window authorization, live-stream selection, and audio policy. Real browser window capture, OBS audio routing, fullscreen, visual transforms, and end-to-end latency must still be checked on the host. See OBS.md.
