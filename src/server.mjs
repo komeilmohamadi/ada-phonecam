@@ -37,8 +37,8 @@ try {
   });
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
-  console.log(`Ada PhoneCam 0.1.0 is listening at https://localhost:${config.port}`);
-  console.log('Stage 1: HTTPS and network setup. Camera streaming arrives in stage 2.');
+  console.log(`Ada PhoneCam 0.2.0 is listening at https://localhost:${config.port}`);
+  console.log('Stage 2: secure pairing and local WebRTC streaming.');
   console.log(
     'Install the local CA certificate before using HTTPS from a phone. See docs/HTTPS.md.',
   );

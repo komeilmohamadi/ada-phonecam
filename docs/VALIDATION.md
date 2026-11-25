@@ -38,3 +38,7 @@ Browser layout and interactions remain visually unverified until the local CA is
 - A clean installation on a second Windows 10 machine.
 
 Phone capture, QR pairing, WebRTC media, OBS, image quality, frame rate, thermal behavior, and video latency are outside stage 1 and have not been tested.
+
+## Stage 2
+
+Nine automated tests passed, including TLS-backed WebSocket pairing, origin rejection, bad-token rejection, one-use token replay rejection, offer forwarding, and revocation. npm audit reported zero known vulnerabilities. Real phone media and browser playback remain unverified; see STREAMING.md.

@@ -1,0 +1,50 @@
+video {
+  display: block;
+  width: 100%;
+  max-height: 65vh;
+  background: #03060a;
+  object-fit: contain;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+button,
+select,
+input {
+  font: inherit;
+  padding: 8px;
+  margin: 6px;
+  border-radius: 5px;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+#qr {
+  width: 240px;
+  height: 240px;
+}
+#link {
+  overflow-wrap: anywhere;
+  color: #8bb7ff;
+}
+#status {
+  color: #8bb7ff;
+}
+#controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 20px 0;
+}
+#controls label {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+#controls output {
+  font-size: 12px;
+  color: #91a0b9;
+}

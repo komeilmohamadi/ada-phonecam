@@ -1,4 +1,5 @@
 import https from 'node:https';
+import { attachSignaling } from './signaling.mjs';
 import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -7,6 +8,10 @@ import { discoverNetwork, isLocalAddress, isLoopback } from './network.mjs';
 import { projectRoot } from './config.mjs';
 
 const assets = new Map([
+  ['/studio', ['stream.html', 'text/html; charset=utf-8']],
+  ['/phone', ['stream.html', 'text/html; charset=utf-8']],
+  ['/stream.js', ['stream.js', 'text/javascript; charset=utf-8']],
+  ['/stream.css', ['stream.css', 'text/css; charset=utf-8']],
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
   ['/styles.css', ['styles.css', 'text/css; charset=utf-8']],
@@ -50,6 +55,17 @@ export async function createApplication({
       });
     },
   );
+  const signaling = attachSignaling(
+    server,
+    () =>
+      ['localhost', '127.0.0.1', ...network.adapters.map((a) => a.address)].map(
+        (a) => `${a}:${port()}`,
+      ),
+    () =>
+      config.host === '127.0.0.1'
+        ? []
+        : network.adapters.map((a) => `https://${a.address}:${port()}`),
+  );
   server.requestTimeout = 10_000;
   server.headersTimeout = 10_000;
   server.keepAliveTimeout = 5_000;
@@ -63,8 +79,8 @@ export async function createApplication({
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'no-referrer',
       'Content-Security-Policy':
-        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=()',
     });
     const body =
       Buffer.isBuffer(value) || typeof value === 'string' ? value : JSON.stringify(value);
@@ -112,7 +128,7 @@ export async function createApplication({
     if (url.pathname === '/api/health')
       return send(response, 200, {
         app: 'ada-phonecam',
-        version: '0.1.0',
+        version: '0.2.0',
         instanceId,
         status: 'ok',
       });
@@ -120,8 +136,8 @@ export async function createApplication({
       const lanAvailable = config.host !== '127.0.0.1';
       return send(response, 200, {
         app: 'Ada PhoneCam',
-        version: '0.1.0',
-        stage: 1,
+        version: '0.2.0',
+        stage: 2,
         startedAt: startedAt.toISOString(),
         uptimeSeconds: Math.floor((Date.now() - startedAt.getTime()) / 1000),
         server: {
@@ -199,6 +215,7 @@ export async function createApplication({
     },
     async close() {
       closing = true;
+      signaling.close();
       clearInterval(poll);
       const closed = new Promise((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve())),

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ada PhoneCam | Studio</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/stream.css" />
+    <script type="module" src="/stream.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <p class="eyebrow">ADA PHONECAM</p>
+      <h1 id="title">Camera connection</h1>
+      <p><a href="/">Network setup</a></p>
+      <p id="status" role="status">Connecting...</p>
+      <section id="pairing" hidden>
+        <label
+          >Network address
+          <select id="network"></select></label
+        ><button id="pair">New pairing code</button><button id="revoke">Disconnect phone</button>
+        <p>
+          Scan with your phone after trusting the local CA. Links expire after two minutes and can
+          be used once.
+        </p>
+        <img id="qr" alt="Phone pairing QR code" hidden />
+        <p><a id="link"></a></p>
+        <p id="expiry"></p>
+      </section>
+      <section id="capture" hidden>
+        <label><input id="audio" type="checkbox" /> Include microphone</label
+        ><button id="start" disabled>Start camera</button><button id="stop">Stop camera</button>
+        <p>
+          Keep this page visible and the phone unlocked. Starting grants this computer control of
+          the current camera session.
+        </p>
+      </section>
+      <video id="video" autoplay muted playsinline controls></video
+      ><button id="sound" hidden>Enable monitor audio</button>
+      <section id="controls"></section>
+    </main>
+  </body>
+</html>

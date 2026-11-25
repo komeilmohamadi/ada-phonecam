@@ -2,7 +2,7 @@
 
 Turn an Android phone into a high-quality webcam for OBS over a local network.
 
-**Current release: stage 1 of 8, local server foundation.** This version runs an HTTPS setup dashboard, discovers local IPv4 adapters, manages local certificates, and provides Windows installation, start, and stop tools. Phone pairing, QR codes, media transport, and OBS feeds are scheduled for later stages. They are not implemented in this release.
+**Current release: stage 2 of 8.** Includes the HTTPS foundation, temporary QR pairing, a phone capture page, and direct WebRTC video with optional microphone audio. Open `/studio` through localhost on the computer. See [streaming setup and validation limits](docs/STREAMING.md). Real Android playback remains a required device test. OBS clean feed belongs to stage 5.
 
 ## Requirements
 
@@ -97,7 +97,7 @@ runtime/      Generated certificates, process state, and server log (ignored)
 
 ## Security boundary
 
-The server accepts loopback and RFC 1918 private IPv4 clients, validates the HTTP Host header, serves only explicitly listed assets, and does not provide general filesystem access. These address checks do not prove that a device is authorized or physically on your LAN. Use a trusted private network and the scoped firewall rule. This stage's dashboard and public CA download are readable by allowed local clients. Private keys and the shutdown secret are never served. The shutdown endpoint also requires loopback access and rejects browser-origin requests. Secure phone pairing will be introduced before camera access in stage 2.
+The server accepts loopback and RFC 1918 private IPv4 clients, validates the HTTP Host header, serves only explicitly listed assets, and does not provide general filesystem access. These address checks do not prove that a device is authorized or physically on your LAN. Use a trusted private network and the scoped firewall rule. The setup dashboard and public CA download are readable by allowed local clients. Private keys and the shutdown secret are never served. The shutdown endpoint also requires loopback access and rejects browser-origin requests. The studio requires a localhost connection; phones need a valid one-use pairing token before exchanging signaling messages.
 
 Keep the project in your own Windows user directory or another directory with equivalent access controls. Do not share `runtime/`, `ca.key`, `server.key`, or backups of these private keys. Only `ada-phonecam-ca.crt` is intended for transfer. Generated keys, local configuration, dependencies, and logs are excluded from Git.
 
