@@ -58,3 +58,7 @@ The clean feed uses the existing incoming MediaStream in a same-origin window. U
 ## Stage 6
 
 Monitoring helper tests exercise selected candidate-pair RTT, jitter and packet loss, missing counters, bounded history, recovery delays, and Wake Lock eligibility. Device recovery, Android power behavior, long sessions, and virtual camera registration and enumeration on Windows require host validation. See STABILITY.md and VIRTUAL-CAMERA.md.
+
+## Stage 7
+
+Tests cover theme storage fallback, quality preset validation, and native frame session ownership and expiration. Verify desktop and Android layouts, theme persistence, and actual video in Windows camera clients before release. See INTERFACE.md and NATIVE-CAMERA.md.

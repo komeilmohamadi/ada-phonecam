@@ -3,11 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
     <title>Ada PhoneCam | Local setup</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/theme.css" />
     <script src="/app.js" type="module"></script>
+    <script src="/theme.js" type="module"></script>
   </head>
   <body>
     <div class="shell">
@@ -17,7 +19,15 @@
             >Ada <strong>PhoneCam</strong><small>YOUR CAMERA. YOUR NETWORK.</small></span
           ></a
         >
-        <span class="version">v0.6.0 <span class="divider">/</span> STABILITY</span>
+        <div class="header-actions">
+          <span class="version">v0.7.0 <span class="divider">/</span> STUDIO</span>
+          <button
+            id="theme-toggle"
+            class="theme-toggle"
+            type="button"
+            aria-label="Switch theme"
+          ></button>
+        </div>
       </header>
       <main>
         <a class="button primary" href="/studio">Open camera studio</a>
@@ -119,7 +129,7 @@
           </section>
         </div>
         <section class="stage-note" aria-label="Current development stage">
-          <div class="stage-number">06<span>/ 08</span></div>
+          <div class="stage-number">07<span>/ 08</span></div>
           <div>
             <h2>Pair your phone in the camera studio.</h2>
             <p>
@@ -127,7 +137,7 @@
               WebRTC video statistics.
             </p>
           </div>
-          <span class="tag">STAGE 6</span>
+          <span class="tag">STAGE 7</span>
         </section>
       </main>
       <footer>

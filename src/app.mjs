@@ -1,4 +1,5 @@
 import https from 'node:https';
+import { createNativeCameraHandler } from './native-camera.mjs';
 import { attachSignaling } from './signaling.mjs';
 import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -8,6 +9,10 @@ import { discoverNetwork, isLocalAddress, isLoopback } from './network.mjs';
 import { projectRoot } from './config.mjs';
 
 const assets = new Map([
+  ['/theme.css', ['theme.css', 'text/css; charset=utf-8']],
+  ['/theme.js', ['theme.js', 'text/javascript; charset=utf-8']],
+  ['/preferences.js', ['preferences.js', 'text/javascript; charset=utf-8']],
+  ['/native-output.js', ['native-output.js', 'text/javascript; charset=utf-8']],
   ['/monitor.js', ['monitor.js', 'text/javascript; charset=utf-8']],
   ['/stability.js', ['stability.js', 'text/javascript; charset=utf-8']],
   ['/view', ['view.html', 'text/html; charset=utf-8']],
@@ -53,6 +58,7 @@ export async function createApplication({
   let closing = false;
   let refreshing = false;
   let poll;
+  const nativeCamera = createNativeCameraHandler();
 
   const server = https.createServer(
     { key: certificates.key, cert: certificates.cert, minVersion: 'TLSv1.2' },
@@ -118,6 +124,9 @@ export async function createApplication({
       return send(response, 400, { error: 'Invalid request URL.' });
     }
 
+    if (url.pathname.startsWith('/api/native-camera/')) {
+      return nativeCamera(request, response, url.pathname, port(), send);
+    }
     if (url.pathname === '/api/shutdown') {
       if (request.method !== 'POST')
         return send(response, 405, { error: 'Use POST for this endpoint.' });
@@ -138,7 +147,7 @@ export async function createApplication({
     if (url.pathname === '/api/health')
       return send(response, 200, {
         app: 'ada-phonecam',
-        version: '0.6.0',
+        version: '0.7.0',
         instanceId,
         status: 'ok',
       });
@@ -146,8 +155,8 @@ export async function createApplication({
       const lanAvailable = config.host !== '127.0.0.1';
       return send(response, 200, {
         app: 'Ada PhoneCam',
-        version: '0.6.0',
-        stage: 6,
+        version: '0.7.0',
+        stage: 7,
         startedAt: startedAt.toISOString(),
         uptimeSeconds: Math.floor((Date.now() - startedAt.getTime()) / 1000),
         server: {

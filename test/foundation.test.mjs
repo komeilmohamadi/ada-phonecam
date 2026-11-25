@@ -150,8 +150,8 @@ test('HTTPS serves real status, protects controls, and renews IP certificates wi
   await t.test('serves the dashboard and status without credentials or private keys', async () => {
     const response = await request('/api/status');
     const status = JSON.parse(response.body);
-    assert.equal(status.version, '0.6.0');
-    assert.equal(status.stage, 6);
+    assert.equal(status.version, '0.7.0');
+    assert.equal(status.stage, 7);
     assert.equal(status.network.primaryAddress, '192.168.50.10');
     assert.equal(status.server.lanAvailable, false);
     assert.equal(status.network.primaryUrl, null);
@@ -173,6 +173,10 @@ test('HTTPS serves real status, protects controls, and renews IP certificates wi
     for (const asset of ['/monitor.js', '/stability.js']) {
       assert.equal((await request(asset)).status, 200);
     }
+    for (const asset of ['/theme.css', '/theme.js', '/preferences.js', '/native-output.js']) {
+      assert.equal((await request(asset)).status, 200);
+    }
+    assert.equal((await request('/api/native-camera/frame')).status, 403);
     const head = await request('/', { method: 'HEAD' });
     assert.equal(head.status, 200);
     assert.equal(head.body, '');

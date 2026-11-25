@@ -8,6 +8,7 @@ import {
   changeQuality,
 } from './stream.js';
 import { profiles, resolutions } from './quality.js';
+import { loadPreset, presetSlots, savePreset } from './preferences.js';
 import {
   numericControls,
   modeControls,
@@ -186,6 +187,13 @@ function render(camera) {
     field('Frame rate target', fps);
     field('Video bitrate limit (Mbps)', bitrate);
     field('Preferred codec (negotiated)', codec);
+    const qualityValue = () => ({
+      profile: profile.value,
+      resolution: Number(resolution.value),
+      fps: Number(fps.value),
+      bitrate: Number(bitrate.value),
+      codec: codec.value,
+    });
     const apply = document.createElement('button');
     apply.textContent = 'Apply quality targets';
     apply.onclick = () => {
@@ -193,15 +201,43 @@ function render(camera) {
         bitrate.reportValidity();
         return;
       }
-      command('quality', {
-        profile: profile.value,
-        resolution: Number(resolution.value),
-        fps: Number(fps.value),
-        bitrate: Number(bitrate.value),
-        codec: codec.value,
-      });
+      command('quality', qualityValue());
     };
     container.append(apply);
+    const preset = document.createElement('div');
+    preset.className = 'preset-actions';
+    const slot = select(presetSlots.map((v) => [v, `Preset ${v}`]), '1');
+    slot.setAttribute('aria-label', 'Quality preset slot');
+    const save = document.createElement('button');
+    save.textContent = 'Save preset';
+    const load = document.createElement('button');
+    load.textContent = 'Load preset';
+    const note = document.createElement('p');
+    note.setAttribute('role', 'status');
+    note.textContent = 'Saved locally. Loading does not change the camera until Apply is pressed.';
+    save.onclick = () => {
+      try {
+        savePreset(localStorage, slot.value, qualityValue(), camera.quality.codecs);
+        note.textContent = `Preset ${slot.value} saved.`;
+      } catch (error) {
+        note.textContent = error.message;
+      }
+    };
+    load.onclick = () => {
+      try {
+        const saved = loadPreset(localStorage, slot.value, camera.quality.codecs);
+        profile.value = saved.profile;
+        resolution.value = String(saved.resolution);
+        fps.value = String(saved.fps);
+        bitrate.value = saved.bitrate;
+        codec.value = saved.codec;
+        note.textContent = 'Preset loaded. Press Apply quality targets to request it.';
+      } catch (error) {
+        note.textContent = error.message;
+      }
+    };
+    preset.append(slot, save, load, note);
+    container.append(preset);
     const qualityNote = document.createElement('p');
     qualityNote.textContent = `Targets are not guaranteed. ${camera.quality.senderStatus} ${camera.quality.codecStatus}`;
     container.append(qualityNote);

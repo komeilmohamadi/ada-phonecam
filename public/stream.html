@@ -6,14 +6,20 @@
     <title>Ada PhoneCam | Studio</title>
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/stream.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <script type="module" src="/theme.js"></script>
+    <script type="module" src="/native-output.js"></script>
     <script type="module" src="/stream.js"></script>
     <script type="module" src="/controls.js"></script>
     <script type="module" src="/studio-feed.js"></script>
     <script type="module" src="/stability.js"></script>
   </head>
   <body>
-    <main class="shell">
-      <p class="eyebrow">ADA PHONECAM</p>
+    <main class="shell studio-shell">
+      <header class="studio-header">
+        <p class="eyebrow">ADA PHONECAM</p>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch theme"></button>
+      </header>
       <h1 id="title">Camera connection</h1>
       <p><a href="/">Network setup</a></p>
       <p id="status" role="status">Connecting...</p>
@@ -57,6 +63,12 @@
         <label><input id="feed-audio" type="checkbox" /> Enable clean feed audio</label>
         <p id="feed-status" role="status">Open the clean feed for OBS Window Capture.</p>
         <p>In the feed window, double-click or press F for fullscreen.</p>
+      </section>
+      <section id="native-camera" hidden aria-label="Windows camera output">
+        <h2>Windows camera output</h2>
+        <p>Experimental local camera bridge. Requires the optional UnityCapture helper, not OBS.</p>
+        <label><input id="native-enabled" type="checkbox" /> Enable Windows camera output</label>
+        <p id="native-status" role="status">Output disabled.</p>
       </section>
       <section id="monitor" aria-label="Connection monitoring">
         <h2>Connection monitoring</h2>
