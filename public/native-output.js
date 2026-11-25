@@ -27,7 +27,9 @@ if (!isPhone && location.hostname === 'localhost' && location.pathname === '/stu
   }
   toggle.addEventListener('change', () => {
     clear();
-    status.textContent = toggle.checked ? 'Waiting for the native camera helper.' : 'Output disabled.';
+    status.textContent = toggle.checked
+      ? 'Waiting for the native camera helper.'
+      : 'Output disabled.';
   });
   async function tick() {
     if (closed || busy || !toggle.checked) return;
@@ -45,9 +47,8 @@ if (!isPhone && location.hostname === 'localhost' && location.pathname === '/stu
       if (!ready) {
         if (performance.now() < nextProbe) return;
         nextProbe = performance.now() + 1000;
-        ready = (
-          await fetch('/api/native-camera/ready', { method: 'POST', headers })
-        ).status === 204;
+        ready =
+          (await fetch('/api/native-camera/ready', { method: 'POST', headers })).status === 204;
         if (!ready) {
           status.textContent = 'Start Native-Camera.cmd Start on this computer.';
           return;

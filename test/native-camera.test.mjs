@@ -54,8 +54,13 @@ test('native frame HTTP boundary rejects foreign origins, hosts and invalid size
   function request(path, method, headers = {}, body = undefined) {
     return new Promise((resolve, reject) => {
       const req = http.request(
-        { host: '127.0.0.1', port, path: `/api/native-camera/${path}`, method,
-          headers: { Host: local, ...headers, ...(body ? { 'Content-Length': body.length } : {}) } },
+        {
+          host: '127.0.0.1',
+          port,
+          path: `/api/native-camera/${path}`,
+          method,
+          headers: { Host: local, ...headers, ...(body ? { 'Content-Length': body.length } : {}) },
+        },
         (res) => {
           const chunks = [];
           res.on('data', (chunk) => chunks.push(chunk));
@@ -67,8 +72,14 @@ test('native frame HTTP boundary rejects foreign origins, hosts and invalid size
     });
   }
   assert.equal((await request('frame', 'GET')).status, 403);
-  assert.equal((await request('session', 'POST', { ...native, Origin: 'https://evil.test' })).status, 403);
-  assert.equal((await request('session', 'POST', { ...native, Host: `127.0.0.1:${port}` })).status, 403);
+  assert.equal(
+    (await request('session', 'POST', { ...native, Origin: 'https://evil.test' })).status,
+    403,
+  );
+  assert.equal(
+    (await request('session', 'POST', { ...native, Host: `127.0.0.1:${port}` })).status,
+    403,
+  );
   assert.equal((await request('ready', 'POST', browser)).status, 409);
   assert.equal((await request('session', 'POST', native)).status, 204);
   assert.equal((await request('session', 'POST', { 'X-Ada-Native': other })).status, 409);

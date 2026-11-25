@@ -206,7 +206,10 @@ function render(camera) {
     container.append(apply);
     const preset = document.createElement('div');
     preset.className = 'preset-actions';
-    const slot = select(presetSlots.map((v) => [v, `Preset ${v}`]), '1');
+    const slot = select(
+      presetSlots.map((v) => [v, `Preset ${v}`]),
+      '1',
+    );
     slot.setAttribute('aria-label', 'Quality preset slot');
     const save = document.createElement('button');
     save.textContent = 'Save preset';
