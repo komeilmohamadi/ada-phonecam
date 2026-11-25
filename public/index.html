@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Ada PhoneCam | Local setup</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" type="module"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Ada PhoneCam home"
+          ><img src="/favicon.svg" width="40" height="40" alt="" /><span
+            >Ada <strong>PhoneCam</strong><small>YOUR CAMERA. YOUR NETWORK.</small></span
+          ></a
+        >
+        <span class="version">v0.1.0 <span class="divider">/</span> FOUNDATION</span>
+      </header>
+      <main>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">LOCAL WORKSPACE</p>
+            <h1>Your setup starts here.</h1>
+            <p class="intro">A private connection between your phone and your stream.</p>
+          </div>
+          <span id="server-badge" class="badge">Checking server</span>
+        </div>
+        <p id="connection-error" class="notice error" role="alert" hidden></p>
+        <section class="metrics" aria-label="Server overview">
+          <article class="metric">
+            <span class="label">SERVER</span><strong id="server-state">Connecting</strong
+            ><span id="server-detail">Waiting for a response</span>
+          </article>
+          <article class="metric">
+            <span class="label">TRANSPORT</span><strong id="transport">Checking</strong
+            ><span id="secure-context">Checking browser security</span>
+          </article>
+          <article class="metric">
+            <span class="label">LOCAL NETWORK</span><strong id="primary-ip">Detecting</strong
+            ><span id="adapter-name">Finding network adapters</span>
+          </article>
+          <article class="metric">
+            <span class="label">UPTIME</span><strong id="uptime">--</strong
+            ><span>Since the server started</span>
+          </article>
+        </section>
+        <div class="workspace">
+          <section class="card addresses">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">01 / NETWORK</p>
+                <h2>Find your connection</h2>
+              </div>
+              <span class="tag">LOCAL ONLY</span>
+            </div>
+            <p class="description">
+              Keep your phone and computer on the same local network. These addresses open this
+              setup dashboard.
+            </p>
+            <div class="address-feature">
+              <span class="label">RECOMMENDED LAN ADDRESS</span>
+              <div class="address-row">
+                <code id="primary-url">Detecting network...</code
+                ><button id="copy-url" class="button primary" disabled>Copy address</button>
+              </div>
+            </div>
+            <p id="network-warning" class="notice" hidden></p>
+            <h3>Available adapters</h3>
+            <ul id="adapters" class="adapter-list" aria-label="Network adapters">
+              <li class="empty">Loading adapters...</li>
+            </ul>
+            <p class="footnote">
+              Using a VPN or multiple networks? Set <code>preferredAddress</code> in
+              <code>config.local.json</code>. Adapter selection is a heuristic; check the address
+              against your phone's network.
+            </p>
+          </section>
+          <section class="card security">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">02 / HTTPS</p>
+                <h2>Trust this computer</h2>
+              </div>
+              <span class="lock-icon" aria-hidden="true">&#9671;</span>
+            </div>
+            <p class="description">
+              The server creates a local certificate authority for this installation. Install its
+              public certificate on devices that will connect.
+            </p>
+            <ol class="steps">
+              <li>
+                <span>1</span>
+                <p>Run <code>scripts\Trust-Certificate.ps1</code> on this Windows account.</p>
+              </li>
+              <li>
+                <span>2</span>
+                <p>
+                  Copy the public CA certificate to your Android phone and install it as a CA
+                  certificate.
+                </p>
+              </li>
+              <li>
+                <span>3</span>
+                <p>Reopen this page over HTTPS and confirm that the browser trusts it.</p>
+              </li>
+            </ol>
+            <a class="button secondary download" href="/cert/ca.crt" download
+              >Download public CA certificate <span aria-hidden="true">&#8595;</span></a
+            >
+            <div class="certificate-details">
+              <span class="label">CA FINGERPRINT / SHA-256</span
+              ><code id="fingerprint">Loading certificate...</code
+              ><span class="expiry">Server certificate expires <time id="expiry">--</time></span>
+            </div>
+          </section>
+        </div>
+        <section class="stage-note" aria-label="Current development stage">
+          <div class="stage-number">01<span>/ 08</span></div>
+          <div>
+            <h2>Foundation is the first step.</h2>
+            <p>
+              This release provides the local HTTPS server, network discovery, and Windows launch
+              tools. Phone pairing and camera streaming are planned for stage 2.
+            </p>
+          </div>
+          <span class="tag">STAGE 1</span>
+        </section>
+      </main>
+      <footer>
+        <span>Ada PhoneCam <span class="divider">/</span> Built for your local network</span
+        ><span id="last-update" aria-live="polite">Waiting for server</span>
+      </footer>
+    </div>
+  </body>
+</html>

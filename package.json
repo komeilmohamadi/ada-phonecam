@@ -1,0 +1,32 @@
+{
+  "name": "ada-phonecam",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local-first phone webcam for streaming with OBS.",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node scripts/launch.mjs start",
+    "stop": "node scripts/launch.mjs stop",
+    "dev": "node src/server.mjs --no-open",
+    "setup": "node scripts/setup.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/komeilmohamadi/ada-phonecam.git"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@peculiar/x509": "3.1.0",
+    "reflect-metadata": "0.2.2"
+  },
+  "devDependencies": {
+    "prettier": "3.10.1"
+  }
+}

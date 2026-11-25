@@ -1,0 +1,17 @@
+node_modules/
+runtime/
+certs/
+coverage/
+work/
+config.local.json
+*.log
+*.key
+*.pem
+*.pfx
+*.p12
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.vscode/
