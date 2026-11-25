@@ -1,13 +1,15 @@
 import { WebSocketServer } from 'ws';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import QRCode from 'qrcode';
+import { openTrustedPhone } from './trusted-phone.mjs';
 import { isLocalAddress, isLoopback } from './network.mjs';
 const secret = () => randomBytes(32).toString('hex');
 const equal = (a, b) =>
   typeof a === 'string' &&
   Buffer.byteLength(a) === Buffer.byteLength(b) &&
   timingSafeEqual(Buffer.from(a), Buffer.from(b));
-export function attachSignaling(server, getHosts, getUrls) {
+export function attachSignaling(server, getHosts, getUrls, trustedFile) {
+  const trusted = openTrustedPhone(trustedFile);
   const wss = new WebSocketServer({
     noServer: true,
     maxPayload: 128 * 1024,
@@ -17,7 +19,8 @@ export function attachSignaling(server, getHosts, getUrls) {
     phone,
     ticket = '',
     expires = 0,
-    resume = '';
+    resume = '',
+    rememberTicket = false;
   const send = (ws, data) => {
     if (ws?.bufferedAmount > 256 * 1024) {
       ws.terminate();
@@ -25,13 +28,14 @@ export function attachSignaling(server, getHosts, getUrls) {
     }
     if (ws?.readyState === 1) ws.send(JSON.stringify(data));
   };
-  const revoke = () => {
+  const trustStatus = () => send(controller, { type: 'trust-status', saved: trusted.exists(), urls: getUrls() });
+  const revoke = (code = 4001) => {
     ticket = '';
     resume = '';
     expires = 0;
     const old = phone;
     phone = null;
-    old?.close(4001, 'Pairing revoked');
+    old?.close(code, code === 4010 ? 'Studio reconnecting' : 'Pairing revoked');
   };
   server.on('upgrade', (req, socket, head) => {
     if (
@@ -75,27 +79,45 @@ export function attachSignaling(server, getHosts, getUrls) {
             ) {
               role = 'controller';
               controller = ws;
-              send(ws, { type: 'authenticated' });
+              send(ws, { type: 'authenticated', saved: trusted.exists(), urls: getUrls() });
+            } else if (
+              m.role === 'controller' &&
+              isLoopback(req.socket.remoteAddress) &&
+              req.headers.host.startsWith('localhost:')
+            ) {
+              return ws.close(4010, 'Studio reconnecting');
             } else if (
               m.role === 'phone' &&
-              controller &&
-              !phone &&
               ((ticket && Date.now() < expires && equal(m.token, ticket)) ||
-                (resume && equal(m.token, resume)))
+                (resume && equal(m.token, resume)) ||
+                trusted.matches(m.remembered))
             ) {
+              if (!controller || phone) return ws.close(4010, 'Waiting for available studio');
+              const fresh = ticket && Date.now() < expires && equal(m.token, ticket);
+              const remembered = fresh && rememberTicket
+                ? trusted.remember()
+                : trusted.matches(m.remembered)
+                  ? m.remembered
+                  : null;
               role = 'phone';
               phone = ws;
               ticket = '';
               expires = 0;
               resume = secret();
-              send(ws, { type: 'authenticated', resume });
+              send(ws, { type: 'authenticated', resume, remembered });
+              trustStatus();
               send(controller, { type: 'paired' });
             } else return ws.close(4003, 'Pairing rejected or device already connected');
             clearTimeout(authTimeout);
             return;
           }
           if (role === 'controller' && m.type === 'pair') {
+            if (phone) {
+              send(ws, { type: 'error', message: 'A phone is connected. Forget it before pairing another phone.' });
+              return;
+            }
             revoke();
+            rememberTicket = m.remember === true;
             ticket = secret();
             expires = Date.now() + 120000;
             const currentTicket = ticket;
@@ -107,7 +129,9 @@ export function attachSignaling(server, getHosts, getUrls) {
             return;
           }
           if (role === 'controller' && m.type === 'revoke') {
+            trusted.forget();
             revoke();
+            trustStatus();
             send(ws, { type: 'left' });
             return;
           }
@@ -115,7 +139,7 @@ export function attachSignaling(server, getHosts, getUrls) {
             role === 'phone'
               ? ['offer', 'candidate', 'stopped', 'error', 'capabilities', 'control-result']
               : ['answer', 'candidate', 'stop', 'control'];
-          if (!allowed.includes(m.type)) return;
+          if (!allowed.includes(m.type) || (role === 'phone' && phone !== ws)) return;
           send(role === 'phone' ? controller : phone, m);
         } catch {
           send(ws, { type: 'error', message: 'Invalid signaling message.' });
@@ -125,7 +149,7 @@ export function attachSignaling(server, getHosts, getUrls) {
         clearTimeout(authTimeout);
         if (controller === ws) {
           controller = null;
-          revoke();
+          revoke(4010);
         }
         if (phone === ws) {
           phone = null;

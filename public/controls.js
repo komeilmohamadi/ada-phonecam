@@ -6,10 +6,12 @@ import {
   send,
   getQuality,
   changeQuality,
+  startWithProfile,
 } from './stream.js';
 import { profiles, resolutions } from './quality.js';
 import { listedCameras, lowNoiseTarget, orientedTargets } from './camera-tuning.js';
 import { loadPreset, presetSlots, savePreset } from './preferences.js';
+import { readFullProfile, saveFullProfile } from './full-profile.js';
 import {
   numericControls,
   modeControls,
@@ -75,6 +77,7 @@ async function report() {
       devices,
       audio: media.getAudioTracks().length > 0,
       microphone: media.getAudioTracks().some((t) => t.enabled),
+      profileSaved: Boolean(readFullProfile()),
     },
   });
 }
@@ -87,6 +90,17 @@ async function execute(m) {
     let message = 'Updated.';
     if (m.name === 'quality') {
       message = await changeQuality(m.value);
+    } else if (m.name === 'saveFullProfile') {
+      saveFullProfile(
+        localStorage,
+        track,
+        getQuality().target,
+        media.getAudioTracks().some((t) => t.enabled),
+      );
+      message = 'Full camera profile saved on the phone.';
+      document.getElementById('use-profile').checked = true;
+    } else if (m.name === 'loadFullProfile') {
+      message = await startWithProfile();
     } else if (m.name === 'refreshDevices') {
       message = 'Camera list refreshed from the browser.';
     } else if (m.name === 'deviceId') {
@@ -328,9 +342,9 @@ function render(camera) {
     );
     slot.setAttribute('aria-label', 'Quality preset slot');
     const save = document.createElement('button');
-    save.textContent = 'Save preset';
+    save.textContent = 'Save quality preset';
     const load = document.createElement('button');
-    load.textContent = 'Load preset';
+    load.textContent = 'Load quality preset';
     const note = document.createElement('p');
     note.setAttribute('role', 'status');
     note.textContent = 'Saved locally. Loading does not change the camera until Apply is pressed.';
@@ -361,6 +375,21 @@ function render(camera) {
     qualityNote.textContent = `Targets are not guaranteed. ${camera.quality.senderStatus} ${camera.quality.codecStatus}`;
     container.append(qualityNote);
   }
+  const full = document.createElement('div');
+  full.className = 'preset-actions';
+  const saveFull = document.createElement('button');
+  saveFull.textContent = 'Save Profile';
+  saveFull.onclick = () => command('saveFullProfile', true);
+  const loadFull = document.createElement('button');
+  loadFull.textContent = 'Load Profile';
+  loadFull.disabled = !camera.profileSaved;
+  loadFull.onclick = () => command('loadFullProfile', true);
+  const fullNote = document.createElement('p');
+  fullNote.textContent = camera.profileSaved
+    ? 'Full profile saved on the phone. Start Camera restores it when enabled.'
+    : 'Save the applied camera, quality and image settings on this phone.';
+  full.append(saveFull, loadFull, fullNote);
+  container.append(full);
   const devices = document.createElement('select');
   for (const device of camera.devices) {
     const option = new Option(device.label, device.id);

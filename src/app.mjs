@@ -9,6 +9,7 @@ import { discoverNetwork, isLocalAddress, isLoopback } from './network.mjs';
 import { projectRoot } from './config.mjs';
 
 const assets = new Map([
+  ['/full-profile.js', ['full-profile.js', 'text/javascript; charset=utf-8']],
   ['/camera-tuning.js', ['camera-tuning.js', 'text/javascript; charset=utf-8']],
   ['/lan-probe.js', ['lan-probe.js', 'text/javascript; charset=utf-8']],
   ['/diagnostics.js', ['diagnostics.js', 'text/javascript; charset=utf-8']],
@@ -84,6 +85,7 @@ export async function createApplication({
       config.host === '127.0.0.1'
         ? []
         : network.adapters.map((a) => `https://${a.address}:${port()}`),
+    path.join(dataDir, 'trusted-phone.json'),
   );
   server.requestTimeout = 10_000;
   server.headersTimeout = 10_000;
@@ -150,7 +152,7 @@ export async function createApplication({
     if (url.pathname === '/api/health')
       return send(response, 200, {
         app: 'ada-phonecam',
-        version: '0.7.2',
+        version: '0.7.3',
         instanceId,
         status: 'ok',
       });
@@ -158,7 +160,7 @@ export async function createApplication({
       const lanAvailable = config.host !== '127.0.0.1';
       return send(response, 200, {
         app: 'Ada PhoneCam',
-        version: '0.7.2',
+        version: '0.7.3',
         stage: 7,
         startedAt: startedAt.toISOString(),
         uptimeSeconds: Math.floor((Date.now() - startedAt.getTime()) / 1000),
@@ -196,6 +198,10 @@ export async function createApplication({
       (!isLoopback(request.socket.remoteAddress) || request.headers.host !== `localhost:${port()}`)
     ) {
       return send(response, 403, { error: 'Clean feed requires the local computer studio.' });
+    }
+    if (url.pathname === '/' && !isLoopback(request.socket.remoteAddress)) {
+      response.writeHead(302, { Location: '/phone', 'Cache-Control': 'no-store' });
+      return response.end();
     }
     const asset = assets.get(url.pathname);
     if (!asset) return send(response, 404, { error: 'Page not found.' });

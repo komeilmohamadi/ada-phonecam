@@ -32,7 +32,9 @@
         <label
           >Network address
           <select id="network"></select></label
-        ><button id="pair">New pairing code</button><button id="revoke">Disconnect phone</button>
+        ><button id="pair">New pairing code</button><button id="revoke">Forget trusted phone</button>
+        <label><input id="remember-phone" type="checkbox" checked /> Remember this phone</label>
+        <p id="trust-status" role="status">Checking trusted phone...</p>
         <p>
           Scan with your phone after trusting the local CA. Links expire after two minutes and can
           be used once.
@@ -44,6 +46,7 @@
       <section id="capture" hidden>
         <label><input id="audio" type="checkbox" /> Include microphone</label
         ><button id="start" disabled>Start camera</button><button id="stop">Stop camera</button>
+        <label><input id="use-profile" type="checkbox" /> Use saved camera profile (including torch)</label>
         <p>
           Keep this page visible and the phone unlocked. Starting grants this computer control of
           the current camera session.

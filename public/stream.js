@@ -12,10 +12,19 @@ import { signalRetryDelay } from './monitor.js';
 import { orientedTargets, qualityConstraints } from './camera-tuning.js';
 import { addLanProbe, receiveLanProbe, resetLanProbe } from './lan-probe.js';
 import { installDiagnostics } from './diagnostics.js';
+import { readFullProfile, restoreProfileControls, profileConstraints } from './full-profile.js';
 
 const phone = location.pathname === '/phone';
 const $ = (id) => document.getElementById(id);
 let token = location.hash.slice(1);
+const trustKey = 'ada-phonecam.trusted.v1';
+let remembered = '';
+try {
+  if (phone && !token) remembered = localStorage.getItem(trustKey) ?? '';
+} catch {
+  // Private or blocked storage requires a new pairing code.
+}
+let hasSavedPhone = false;
 let captureGeneration = 0;
 history.replaceState(null, '', location.pathname);
 let ws,
@@ -246,6 +255,7 @@ export async function capture(
     ...orientedTargets(quality, { width: innerWidth, height: innerHeight }),
   },
   microphoneEnabled = true,
+  restored = null,
 ) {
   stopMedia();
   const generation = captureGeneration;
@@ -266,27 +276,72 @@ export async function capture(
     stopMedia();
     status('Camera ended. Start it again on this phone.');
   };
+  let restoredMessage = '';
   try {
+    if (restored) {
+      restoredMessage = await restoreProfileControls(media.getVideoTracks()[0], restored);
+      if (generation !== captureGeneration) throw new Error('Camera session changed.');
+    }
     await offer();
   } catch (error) {
     if (generation === captureGeneration) stopMedia();
     throw error;
   }
   window.dispatchEvent(new Event('capturechange'));
+  return restoredMessage;
+}
+export async function startWithProfile() {
+  const saved = readFullProfile();
+  if (!saved) throw new Error('No saved camera profile.');
+  const previous = quality;
+  quality = validateQuality(saved.quality, getQuality().codecs);
+  try {
+    return await capture(profileConstraints(saved), saved.microphone, saved);
+  } catch (error) {
+    quality = previous;
+    throw error;
+  }
+}
+function pair() {
+  send({ type: 'pair', url: $('network').value, remember: $('remember-phone').checked });
+}
+function showTrusted(saved, urls = []) {
+  hasSavedPhone = saved;
+  $('trust-status').textContent = saved
+    ? `Trusted phone saved. Reopen ${urls[0] ?? 'the same LAN address'} on that phone.`
+    : 'No trusted phone saved.';
+  if (urls.length && !$('network').options.length) {
+    $('network').replaceChildren(...urls.map((url) => new Option(url, url)));
+  }
 }
 async function message(m) {
-  if (m.type === 'network-changed' && !phone && !m.paired) send({ type: 'pair' });
+  if (m.type === 'network-changed' && !phone && !m.paired && !hasSavedPhone) pair();
+  if (m.type === 'trust-status' && !phone) showTrusted(m.saved, m.urls);
   if (m.type === 'authenticated') {
     authenticated = true;
     retryAttempt = 0;
     if (phone) {
       token = m.resume;
+      remembered = m.remembered ?? '';
+      let stored = true;
+      try {
+        if (remembered) localStorage.setItem(trustKey, remembered);
+        else localStorage.removeItem(trustKey);
+      } catch {
+        stored = false;
+      }
+      $('use-profile').checked = Boolean(readFullProfile());
       resetLanProbe();
       $('start').disabled = false;
-      status('Paired. Press Start camera to grant camera access.');
+      status(stored ? 'Paired. Press Start camera to grant camera access.' : 'Paired, but browser storage is unavailable. A new QR may be needed after refresh.');
     } else {
-      status('Studio ready. Create a pairing code.');
-      send({ type: 'pair' });
+      showTrusted(m.saved, m.urls);
+      status(m.saved ? 'Waiting for trusted phone.' : 'Studio ready. Create a pairing code.');
+      if (!m.saved) pair();
+      else {
+        $('link').textContent = 'Open the saved LAN address on your phone.';
+        $('qr').hidden = true;
+      }
     }
   } else if (m.type === 'pairing') {
     resetPeer();
@@ -358,7 +413,7 @@ function connect() {
   ws = socket;
   socket.onopen = () => {
     if (socket === ws && !closed)
-      send({ type: 'hello', role: phone ? 'phone' : 'controller', token });
+      send({ type: 'hello', role: phone ? 'phone' : 'controller', token, remembered });
   };
   socket.onmessage = (event) => {
     chain = chain
@@ -374,7 +429,18 @@ function connect() {
     window.dispatchEvent(new CustomEvent('signalmessage', { detail: { type: 'left' } }));
     stopMedia();
     $('start').disabled = true;
-    status(event.reason || 'Signaling disconnected. Reconnecting...');
+    if (phone && [4001, 4003].includes(event.code)) {
+      token = '';
+      if (remembered) {
+        try {
+          localStorage.removeItem(trustKey);
+        } catch {
+          // Storage may be unavailable.
+        }
+      }
+      remembered = '';
+      status('Pairing expired or revoked. Scan a new QR code.');
+    } else status(event.reason || 'Signaling disconnected. Reconnecting...');
     if (!closed && ![4001, 4003, 4008].includes(event.code)) {
       retry = setTimeout(connect, signalRetryDelay(retryAttempt++));
     }
@@ -389,16 +455,19 @@ $('title').textContent = phone ? 'Your phone camera' : 'Camera studio';
 $('pairing').hidden = phone;
 $('capture').hidden = !phone;
 $('sound').hidden = phone;
-$('pair').onclick = () => send({ type: 'pair', url: $('network').value });
-$('network').onchange = () => send({ type: 'pair', url: $('network').value });
+$('pair').onclick = pair;
+$('network').onchange = pair;
+$('remember-phone').onchange = pair;
 $('revoke').onclick = () => {
   resetPeer();
   send({ type: 'revoke' });
+  pair();
 };
 $('start').onclick = async () => {
   $('start').disabled = true;
   try {
-    await capture();
+    if ($('use-profile').checked) status(await startWithProfile());
+    else await capture();
   } catch (error) {
     status(`${error.name}: ${error.message}`);
   } finally {
@@ -422,6 +491,6 @@ window.addEventListener('pagehide', () => {
 });
 if (!phone && location.hostname !== 'localhost')
   status('Open the studio using https://localhost on the computer.');
-else if (phone && !token) status('Scan a fresh pairing QR code from the computer studio.');
+else if (phone && !token && !remembered) status('Scan a fresh pairing QR code from the computer studio.');
 else if (!window.isSecureContext) status('Trust the local CA before using the camera.');
 else connect();
