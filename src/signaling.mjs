@@ -28,7 +28,8 @@ export function attachSignaling(server, getHosts, getUrls, trustedFile) {
     }
     if (ws?.readyState === 1) ws.send(JSON.stringify(data));
   };
-  const trustStatus = () => send(controller, { type: 'trust-status', saved: trusted.exists(), urls: getUrls() });
+  const trustStatus = () =>
+    send(controller, { type: 'trust-status', saved: trusted.exists(), urls: getUrls() });
   const revoke = (code = 4001) => {
     ticket = '';
     resume = '';
@@ -94,11 +95,12 @@ export function attachSignaling(server, getHosts, getUrls, trustedFile) {
             ) {
               if (!controller || phone) return ws.close(4010, 'Waiting for available studio');
               const fresh = ticket && Date.now() < expires && equal(m.token, ticket);
-              const remembered = fresh && rememberTicket
-                ? trusted.remember()
-                : trusted.matches(m.remembered)
-                  ? m.remembered
-                  : null;
+              const remembered =
+                fresh && rememberTicket
+                  ? trusted.remember()
+                  : trusted.matches(m.remembered)
+                    ? m.remembered
+                    : null;
               role = 'phone';
               phone = ws;
               ticket = '';
@@ -113,7 +115,10 @@ export function attachSignaling(server, getHosts, getUrls, trustedFile) {
           }
           if (role === 'controller' && m.type === 'pair') {
             if (phone) {
-              send(ws, { type: 'error', message: 'A phone is connected. Forget it before pairing another phone.' });
+              send(ws, {
+                type: 'error',
+                message: 'A phone is connected. Forget it before pairing another phone.',
+              });
               return;
             }
             revoke();

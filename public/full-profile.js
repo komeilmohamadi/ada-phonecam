@@ -1,23 +1,47 @@
 import { validateQuality } from './quality.js';
 import { orientedTargets } from './camera-tuning.js';
-import { applyCameraControl, controlSupported, numericControls, modeControls } from './camera-controls.js';
+import {
+  applyCameraControl,
+  controlSupported,
+  numericControls,
+  modeControls,
+} from './camera-controls.js';
 
 const key = 'ada-phonecam.full-profile.v1';
 const codecs = ['H264', 'VP8', 'VP9', 'AV1'];
 const dimensions = ['width', 'height', 'frameRate'];
 const image = numericControls.filter((name) => !dimensions.includes(name));
 const allowed = [...modeControls, ...image, 'torch'];
-const modesFor = { focusDistance: 'focusMode', iso: 'exposureMode', exposureTime: 'exposureMode', colorTemperature: 'whiteBalanceMode' };
+const modesFor = {
+  focusDistance: 'focusMode',
+  iso: 'exposureMode',
+  exposureTime: 'exposureMode',
+  colorTemperature: 'whiteBalanceMode',
+};
 
 function normalize(value) {
-  if (!value || value.version !== 1 || typeof value.deviceId !== 'string' || !value.deviceId || value.deviceId.length > 512) {
+  if (
+    !value ||
+    value.version !== 1 ||
+    typeof value.deviceId !== 'string' ||
+    !value.deviceId ||
+    value.deviceId.length > 512
+  ) {
     throw new Error('Invalid camera profile.');
   }
-  if (!['landscape', 'portrait'].includes(value.orientation)) throw new Error('Invalid profile orientation.');
+  if (!['landscape', 'portrait'].includes(value.orientation))
+    throw new Error('Invalid profile orientation.');
   const controls = {};
   for (const name of allowed) {
     const v = value.controls?.[name];
-    if (numericControls.includes(name) ? Number.isFinite(v) : name === 'torch' ? typeof v === 'boolean' : typeof v === 'string' && v.length <= 32) controls[name] = v;
+    if (
+      numericControls.includes(name)
+        ? Number.isFinite(v)
+        : name === 'torch'
+          ? typeof v === 'boolean'
+          : typeof v === 'string' && v.length <= 32
+    )
+      controls[name] = v;
   }
   const manual = {};
   for (const name of dimensions) {
@@ -49,7 +73,8 @@ export function saveFullProfile(storage, track, quality, microphone) {
   const caps = track.getCapabilities();
   const controls = {};
   for (const name of allowed) {
-    if (controlSupported(caps, name) && settings[name] !== undefined) controls[name] = settings[name];
+    if (controlSupported(caps, name) && settings[name] !== undefined)
+      controls[name] = settings[name];
   }
   const manual = {};
   const constraints = track.getConstraints();
@@ -96,7 +121,12 @@ export async function restoreProfileControls(track, saved) {
   }
   const settings = track.getSettings();
   if (profile.deviceId !== settings.deviceId) problems.push('deviceId');
-  if (Number.isFinite(settings.width) && Number.isFinite(settings.height) && (settings.height > settings.width ? 'portrait' : 'landscape') !== profile.orientation) problems.push('orientation');
+  if (
+    Number.isFinite(settings.width) &&
+    Number.isFinite(settings.height) &&
+    (settings.height > settings.width ? 'portrait' : 'landscape') !== profile.orientation
+  )
+    problems.push('orientation');
   return problems.length
     ? `Saved profile requested. Not confirmed: ${problems.join(', ')}. Check actual capture statistics.`
     : 'Saved profile requested. Check actual capture and negotiated quality.';

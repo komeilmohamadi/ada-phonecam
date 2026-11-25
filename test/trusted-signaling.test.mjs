@@ -13,7 +13,12 @@ test('remembered phone reconnects after studio refresh and cannot reconnect afte
   const cert = await ensureCertificates(dir, []);
   const server = https.createServer({ key: cert.key, cert: cert.cert });
   let port;
-  const signaling = attachSignaling(server, () => [`localhost:${port}`], () => [`https://localhost:${port}`], path.join(dir, 'trusted.json'));
+  const signaling = attachSignaling(
+    server,
+    () => [`localhost:${port}`],
+    () => [`https://localhost:${port}`],
+    path.join(dir, 'trusted.json'),
+  );
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   port = server.address().port;
   const clients = [];
@@ -25,15 +30,22 @@ test('remembered phone reconnects after studio refresh and cannot reconnect afte
   });
   async function connect() {
     const ws = new WebSocket(`wss://127.0.0.1:${port}/signal`, {
-      ca: cert.ca, servername: 'localhost', headers: { Host: `localhost:${port}`, Origin: `https://localhost:${port}` },
+      ca: cert.ca,
+      servername: 'localhost',
+      headers: { Host: `localhost:${port}`, Origin: `https://localhost:${port}` },
     });
     clients.push(ws);
     ws.messages = [];
     ws.on('message', (raw) => ws.messages.push(JSON.parse(raw)));
-    await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
+    await new Promise((resolve, reject) => {
+      ws.once('open', resolve);
+      ws.once('error', reject);
+    });
     return ws;
   }
-  function send(ws, value) { ws.send(JSON.stringify(value)); }
+  function send(ws, value) {
+    ws.send(JSON.stringify(value));
+  }
   async function receive(ws, type) {
     for (let i = 0; i < 150; i++) {
       const index = ws.messages.findIndex((m) => m.type === type);

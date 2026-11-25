@@ -333,7 +333,11 @@ async function message(m) {
       $('use-profile').checked = Boolean(readFullProfile());
       resetLanProbe();
       $('start').disabled = false;
-      status(stored ? 'Paired. Press Start camera to grant camera access.' : 'Paired, but browser storage is unavailable. A new QR may be needed after refresh.');
+      status(
+        stored
+          ? 'Paired. Press Start camera to grant camera access.'
+          : 'Paired, but browser storage is unavailable. A new QR may be needed after refresh.',
+      );
     } else {
       showTrusted(m.saved, m.urls);
       status(m.saved ? 'Waiting for trusted phone.' : 'Studio ready. Create a pairing code.');
@@ -491,6 +495,7 @@ window.addEventListener('pagehide', () => {
 });
 if (!phone && location.hostname !== 'localhost')
   status('Open the studio using https://localhost on the computer.');
-else if (phone && !token && !remembered) status('Scan a fresh pairing QR code from the computer studio.');
+else if (phone && !token && !remembered)
+  status('Scan a fresh pairing QR code from the computer studio.');
 else if (!window.isSecureContext) status('Trust the local CA before using the camera.');
 else connect();

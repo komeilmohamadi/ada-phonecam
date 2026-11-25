@@ -34,7 +34,11 @@ export function openTrustedPhone(file) {
   return {
     exists: () => hash !== null,
     matches(value) {
-      return valid(value) && hash !== null && timingSafeEqual(Buffer.from(digest(value)), Buffer.from(hash));
+      return (
+        valid(value) &&
+        hash !== null &&
+        timingSafeEqual(Buffer.from(digest(value)), Buffer.from(hash))
+      );
     },
     remember() {
       const token = randomBytes(32).toString('hex');
