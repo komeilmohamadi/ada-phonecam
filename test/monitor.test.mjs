@@ -11,7 +11,10 @@ import {
 
 test('network statistics use the selected pair and interval packet counters', () => {
   const report = new Map([
-    ['video', { id: 'video', transportId: 't', packetsReceived: 190, packetsLost: 10, jitter: 0.004 }],
+    [
+      'video',
+      { id: 'video', transportId: 't', packetsReceived: 190, packetsLost: 10, jitter: 0.004 },
+    ],
     ['t', { selectedCandidatePairId: 'p' }],
     ['p', { currentRoundTripTime: 0.012 }],
   ]);

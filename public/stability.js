@@ -52,21 +52,27 @@ function clearStats() {
   draw();
 }
 window.addEventListener('ada-stats-reset', clearStats);
-window.addEventListener('ada-stats', ({ detail: { report, direction, sample, metrics: video } }) => {
-  const result = networkStats(report, direction, sample.id, previous);
-  previous = result.sample;
-  const m = result.metrics;
-  history = appendSample(history, { fps: video.fps, mbps: video.mbps });
-  metrics.textContent = `RTT: ${format(m.rtt)} ms | Jitter: ${format(m.jitter)} ms | Interval loss: ${format(m.loss, 2)}% | Dropped: ${format(m.dropped, 0)} | Freezes: ${format(m.freezes, 0)}`;
-  draw();
-});
+window.addEventListener(
+  'ada-stats',
+  ({ detail: { report, direction, sample, metrics: video } }) => {
+    const result = networkStats(report, direction, sample.id, previous);
+    previous = result.sample;
+    const m = result.metrics;
+    history = appendSample(history, { fps: video.fps, mbps: video.mbps });
+    metrics.textContent = `RTT: ${format(m.rtt)} ms | Jitter: ${format(m.jitter)} ms | Interval loss: ${format(m.loss, 2)}% | Dropped: ${format(m.dropped, 0)} | Freezes: ${format(m.freezes, 0)}`;
+    draw();
+  },
+);
 clearStats();
 
 let wake = null,
   wakeBusy = false;
 const wakeStatus = $('wake-status');
 const wakeToggle = $('wake-enabled');
-const active = () => getMedia()?.getVideoTracks().some((t) => t.readyState === 'live') === true;
+const active = () =>
+  getMedia()
+    ?.getVideoTracks()
+    .some((t) => t.readyState === 'live') === true;
 const wantsWake = () =>
   !stopped &&
   isPhone &&

@@ -341,7 +341,8 @@ function connect() {
   const socket = new WebSocket(`wss://${location.host}/signal`);
   ws = socket;
   socket.onopen = () => {
-    if (socket === ws && !closed) send({ type: 'hello', role: phone ? 'phone' : 'controller', token });
+    if (socket === ws && !closed)
+      send({ type: 'hello', role: phone ? 'phone' : 'controller', token });
   };
   socket.onmessage = (event) => {
     chain = chain
