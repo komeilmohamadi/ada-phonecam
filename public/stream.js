@@ -1,6 +1,5 @@
 import {
   availableCodecs,
-  captureTargets,
   configureReceiver,
   configureSender,
   defaultQuality,
@@ -10,6 +9,9 @@ import {
   videoStats,
 } from './quality.js';
 import { signalRetryDelay } from './monitor.js';
+import { orientedTargets, qualityConstraints } from './camera-tuning.js';
+import { addLanProbe, receiveLanProbe, resetLanProbe } from './lan-probe.js';
+import { installDiagnostics } from './diagnostics.js';
 
 const phone = location.pathname === '/phone';
 const $ = (id) => document.getElementById(id);
@@ -82,7 +84,8 @@ export async function changeQuality(value) {
   const track = media?.getVideoTracks()[0];
   if (!track || track.readyState !== 'live') throw new Error('Start the phone camera first.');
   const old = quality;
-  await track.applyConstraints({ ...track.getConstraints(), ...captureTargets(next) });
+  const constraints = qualityConstraints(track, old, next, value.orientation ?? 'keep');
+  if (constraints) await track.applyConstraints(constraints);
   if (track !== media?.getVideoTracks()[0]) throw new Error('Camera changed during the request.');
   quality = next;
   setHint(track, next.profile);
@@ -155,6 +158,14 @@ function peer(id) {
   current.pendingCandidates = [];
   current.descriptionSent = false;
   pc = current;
+  if (!phone) {
+    current.ondatachannel = ({ channel }) => {
+      receiveLanProbe(channel, (result) => {
+        if (current === pc)
+          window.dispatchEvent(new CustomEvent('ada-lan-result', { detail: result }));
+      });
+    };
+  }
   current.onicecandidate = (event) => {
     if (event.candidate) {
       const data = { type: 'candidate', candidate: event.candidate.toJSON(), epoch: id };
@@ -185,6 +196,7 @@ function peer(id) {
 export async function offer() {
   if (!media) return;
   const current = peer(crypto.randomUUID());
+  addLanProbe(current);
   senderStatus = 'Waiting for negotiation';
   codecStatus = '';
   media.getTracks().forEach((track) => {
@@ -231,7 +243,7 @@ export async function recoverMedia(current) {
 export async function capture(
   videoConstraints = {
     facingMode: { ideal: 'environment' },
-    ...captureTargets(quality),
+    ...orientedTargets(quality, { width: innerWidth, height: innerHeight }),
   },
   microphoneEnabled = true,
 ) {
@@ -269,6 +281,7 @@ async function message(m) {
     retryAttempt = 0;
     if (phone) {
       token = m.resume;
+      resetLanProbe();
       $('start').disabled = false;
       status('Paired. Press Start camera to grant camera access.');
     } else {
@@ -277,6 +290,7 @@ async function message(m) {
     }
   } else if (m.type === 'pairing') {
     resetPeer();
+    window.dispatchEvent(new Event('ada-lan-reset'));
     $('qr').hidden = !m.qr;
     if (m.qr) $('qr').src = m.qr;
     $('link').textContent = m.link ?? 'No LAN interface found';
@@ -293,6 +307,7 @@ async function message(m) {
       }),
     );
   } else if (m.type === 'paired') {
+    window.dispatchEvent(new Event('ada-lan-reset'));
     $('qr').hidden = true;
     $('link').removeAttribute('href');
     $('link').textContent = 'Phone paired';
@@ -331,6 +346,7 @@ async function message(m) {
     status('Camera stopped by computer.');
   } else if (['left', 'stopped'].includes(m.type)) {
     resetPeer();
+    if (m.type === 'left') window.dispatchEvent(new Event('ada-lan-reset'));
     status('Camera disconnected or stopped.');
   } else if (m.type === 'error') status(m.message);
   window.dispatchEvent(new CustomEvent('signalmessage', { detail: m }));
@@ -368,6 +384,7 @@ function connect() {
       status('Cannot connect. Check HTTPS trust and use localhost for the computer studio.');
   };
 }
+if (!phone) installDiagnostics($('video'));
 $('title').textContent = phone ? 'Your phone camera' : 'Camera studio';
 $('pairing').hidden = phone;
 $('capture').hidden = !phone;

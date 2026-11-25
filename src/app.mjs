@@ -9,6 +9,9 @@ import { discoverNetwork, isLocalAddress, isLoopback } from './network.mjs';
 import { projectRoot } from './config.mjs';
 
 const assets = new Map([
+  ['/camera-tuning.js', ['camera-tuning.js', 'text/javascript; charset=utf-8']],
+  ['/lan-probe.js', ['lan-probe.js', 'text/javascript; charset=utf-8']],
+  ['/diagnostics.js', ['diagnostics.js', 'text/javascript; charset=utf-8']],
   ['/theme.css', ['theme.css', 'text/css; charset=utf-8']],
   ['/theme.js', ['theme.js', 'text/javascript; charset=utf-8']],
   ['/preferences.js', ['preferences.js', 'text/javascript; charset=utf-8']],
@@ -147,7 +150,7 @@ export async function createApplication({
     if (url.pathname === '/api/health')
       return send(response, 200, {
         app: 'ada-phonecam',
-        version: '0.7.0',
+        version: '0.7.1',
         instanceId,
         status: 'ok',
       });
@@ -155,7 +158,7 @@ export async function createApplication({
       const lanAvailable = config.host !== '127.0.0.1';
       return send(response, 200, {
         app: 'Ada PhoneCam',
-        version: '0.7.0',
+        version: '0.7.1',
         stage: 7,
         startedAt: startedAt.toISOString(),
         uptimeSeconds: Math.floor((Date.now() - startedAt.getTime()) / 1000),

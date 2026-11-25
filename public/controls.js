@@ -8,6 +8,7 @@ import {
   changeQuality,
 } from './stream.js';
 import { profiles, resolutions } from './quality.js';
+import { listedCameras, lowNoiseTarget, orientedTargets } from './camera-tuning.js';
 import { loadPreset, presetSlots, savePreset } from './preferences.js';
 import {
   numericControls,
@@ -36,17 +37,31 @@ const names = {
   brightness: 'Brightness',
   contrast: 'Contrast',
   saturation: 'Saturation',
+  sharpness: 'Sharpness',
   torch: 'Torch',
 };
+let phoneSelector;
+function updatePhoneSelector(devices, active) {
+  if (!phoneSelector) return;
+  phoneSelector.replaceChildren(...devices.map((d) => new Option(d.label, d.id)));
+  phoneSelector.value = active ?? '';
+  phoneSelector.disabled = devices.length < 2;
+}
 async function report() {
   const media = getMedia(),
     track = media?.getVideoTracks()[0];
   if (!track) {
+    updatePhoneSelector([], '');
     send({ type: 'capabilities', camera: null });
     return;
   }
-  const devices = await navigator.mediaDevices.enumerateDevices();
+  const devices = listedCameras(
+    await navigator.mediaDevices.enumerateDevices(),
+    track.getSettings(),
+    track.label,
+  );
   if (track !== getMedia()?.getVideoTracks()[0]) return;
+  updatePhoneSelector(devices, track.getSettings().deviceId);
   send({
     type: 'capabilities',
     camera: {
@@ -54,9 +69,7 @@ async function report() {
       capabilities: track.getCapabilities?.() ?? {},
       settings: track.getSettings(),
       quality: getQuality(),
-      devices: devices
-        .filter((d) => d.kind === 'videoinput')
-        .map((d) => ({ id: d.deviceId, label: d.label || 'Camera' })),
+      devices,
       audio: media.getAudioTracks().length > 0,
       microphone: media.getAudioTracks().some((t) => t.enabled),
     },
@@ -71,6 +84,8 @@ async function execute(m) {
     let message = 'Updated.';
     if (m.name === 'quality') {
       message = await changeQuality(m.value);
+    } else if (m.name === 'refreshDevices') {
+      message = 'Camera list refreshed from the browser.';
     } else if (m.name === 'deviceId') {
       const devices = await navigator.mediaDevices.enumerateDevices();
       if (!devices.some((d) => d.kind === 'videoinput' && d.deviceId === m.value))
@@ -79,9 +94,7 @@ async function execute(m) {
       await capture(
         {
           deviceId: { exact: m.value },
-          width: { ideal: s.width },
-          height: { ideal: s.height },
-          frameRate: { ideal: s.frameRate },
+          ...orientedTargets(getQuality().target, s),
         },
         media.getAudioTracks().some((t) => t.enabled),
       );
@@ -184,6 +197,11 @@ function render(camera) {
     };
     field('Performance profile', profile);
     field('Resolution target', resolution);
+    const orientation = select(
+      [['keep', 'Keep current orientation'], ['landscape', 'Landscape'], ['portrait', 'Portrait']],
+      'keep',
+    );
+    field('Capture orientation (requested)', orientation);
     field('Frame rate target', fps);
     field('Video bitrate limit (Mbps)', bitrate);
     field('Preferred codec (negotiated)', codec);
@@ -201,9 +219,19 @@ function render(camera) {
         bitrate.reportValidity();
         return;
       }
-      command('quality', qualityValue());
+      command('quality', { ...qualityValue(), orientation: orientation.value });
     };
     container.append(apply);
+    const lowNoise = document.createElement('button');
+    lowNoise.textContent = 'Load Low Noise preset';
+    lowNoise.onclick = () => {
+      const suggested = lowNoiseTarget(Number(resolution.value));
+      profile.value = suggested.profile;
+      fps.value = String(suggested.fps);
+      bitrate.value = suggested.bitrate;
+      document.getElementById('status').textContent = 'Low Noise targets loaded. Add light and press Apply.';
+    };
+    container.append(lowNoise);
     const preset = document.createElement('div');
     preset.className = 'preset-actions';
     const slot = select(
@@ -253,7 +281,11 @@ function render(camera) {
   }
   devices.disabled = camera.devices.length < 2;
   devices.onchange = () => command('deviceId', devices.value);
-  field('Camera / lens', devices);
+  field(`Camera / lens (${camera.devices.length} exposed by browser)`, devices);
+  const refresh = document.createElement('button');
+  refresh.textContent = 'Refresh camera list';
+  refresh.onclick = () => command('refreshDevices', true);
+  container.append(refresh);
   for (const name of [...numericControls, ...modeControls, 'torch']) {
     const cap = camera.capabilities[name],
       supported = controlSupported(camera.capabilities, name);
@@ -300,6 +332,21 @@ function render(camera) {
   container.append(stop);
 }
 if (isPhone) {
+  phoneSelector = document.createElement('select');
+  phoneSelector.disabled = true;
+  const lensLabel = document.createElement('label');
+  lensLabel.append('Camera / lens (after Start camera)', phoneSelector);
+  document.getElementById('capture').append(lensLabel);
+  phoneSelector.onchange = () => {
+    const track = getMedia()?.getVideoTracks()[0];
+    if (!track) return;
+    const selected = phoneSelector.value;
+    phoneSelector.disabled = true;
+    commands = commands.then(() => execute({
+      cameraId: track.id, name: 'deviceId', value: selected, requestId: crypto.randomUUID(),
+    })).catch(() => report().catch(() => {}));
+  };
+  navigator.mediaDevices?.addEventListener('devicechange', () => report().catch(() => {}));
   window.addEventListener('capturechange', () => {
     report().catch(() => {});
   });
