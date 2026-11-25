@@ -6,3 +6,7 @@ config.local.json
 package-lock.json
 *.bat
 *.ps1
+
+# Local upgrade tool and its generated journals
+.ada-upgrader/
+Ada-Upgrade.cmd

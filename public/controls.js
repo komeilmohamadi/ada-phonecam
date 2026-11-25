@@ -1,4 +1,5 @@
-import { isPhone, getMedia, capture, stopMedia, send } from './stream.js';
+import { isPhone, getMedia, capture, stopMedia, send, getQuality, changeQuality } from './stream.js';
+import { profiles, resolutions } from './quality.js';
 import {
   numericControls,
   modeControls,
@@ -43,6 +44,7 @@ async function report() {
       id: track.id,
       capabilities: track.getCapabilities?.() ?? {},
       settings: track.getSettings(),
+      quality: getQuality(),
       devices: devices
         .filter((d) => d.kind === 'videoinput')
         .map((d) => ({ id: d.deviceId, label: d.label || 'Camera' })),
@@ -58,7 +60,9 @@ async function execute(m) {
     if (!track || track.id !== m.cameraId)
       throw new Error('Camera session changed. Wait for updated controls.');
     let message = 'Updated.';
-    if (m.name === 'deviceId') {
+    if (m.name === 'quality') {
+      message = await changeQuality(m.value);
+    } else if (m.name === 'deviceId') {
       const devices = await navigator.mediaDevices.enumerateDevices();
       if (!devices.some((d) => d.kind === 'videoinput' && d.deviceId === m.value))
         throw new Error('Camera is unavailable.');
@@ -131,6 +135,42 @@ function render(camera) {
     const label = document.createElement('label');
     label.append(document.createTextNode(title), input);
     container.append(label);
+  }
+  if (camera.quality?.target) {
+    const q = camera.quality.target;
+    const select = (entries, selected) => {
+      const el = document.createElement('select');
+      for (const [value, title] of entries) el.add(new Option(title, value));
+      el.value = String(selected);
+      return el;
+    };
+    const profile = select(Object.entries(profiles).map(([key, p]) => [key, p.label]), q.profile);
+    const resolution = select(Object.keys(resolutions).map((v) => [v, v === '2160' ? '4K UHD' : `${v}p`]), q.resolution);
+    const fps = select([[30, '30 FPS'], [60, '60 FPS']], q.fps);
+    const bitrate = document.createElement('input');
+    bitrate.type = 'number';
+    bitrate.min = '1';
+    bitrate.max = '150';
+    bitrate.step = '0.5';
+    bitrate.value = q.bitrate;
+    const codec = select([['auto', 'Automatic'], ...camera.quality.codecs.map((c) => [c, c])], q.codec);
+    codec.disabled = camera.quality.codecs.length === 0;
+    profile.onchange = () => { bitrate.value = profiles[profile.value].bitrate; };
+    field('Performance profile', profile);
+    field('Resolution target', resolution);
+    field('Frame rate target', fps);
+    field('Video bitrate limit (Mbps)', bitrate);
+    field('Preferred codec (negotiated)', codec);
+    const apply = document.createElement('button');
+    apply.textContent = 'Apply quality targets';
+    apply.onclick = () => {
+      if (!bitrate.checkValidity() || !bitrate.value) { bitrate.reportValidity(); return; }
+      command('quality', { profile: profile.value, resolution: Number(resolution.value), fps: Number(fps.value), bitrate: Number(bitrate.value), codec: codec.value });
+    };
+    container.append(apply);
+    const qualityNote = document.createElement('p');
+    qualityNote.textContent = `Targets are not guaranteed. ${camera.quality.senderStatus} ${camera.quality.codecStatus}`;
+    container.append(qualityNote);
   }
   const devices = document.createElement('select');
   for (const device of camera.devices) {

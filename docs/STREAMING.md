@@ -10,4 +10,4 @@ If signaling drops, camera tracks are stopped and signaling reconnects with an i
 
 ## Validation boundary
 
-The automated tests validate TLS, WebSocket origin rejection, single-use pairing, bad-token rejection, signaling forwarding, and revocation. Real Android camera capture, WebRTC playback, audio, and latency require the user's phone and trusted browser setup and are not claimed as verified by these tests. Stage 3 adds capability-driven remote camera controls. Performance tuning and OBS clean feed belong to later stages.
+The automated tests validate TLS, WebSocket origin rejection, single-use pairing, bad-token rejection, signaling forwarding, and revocation. Real Android camera capture, WebRTC playback, audio, and latency require the user's phone and trusted browser setup and are not claimed as verified by these tests. Stage 3 adds capability-driven remote camera controls. Stage 4 adds [quality targets and RTP statistics](QUALITY.md). OBS clean feed belongs to stage 5.

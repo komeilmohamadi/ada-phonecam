@@ -46,3 +46,7 @@ Nine automated tests passed, including TLS-backed WebSocket pairing, origin reje
 ## Stage 3
 
 Twelve automated tests passed. New tests check rejection of unsupported/out-of-range camera requests, preservation of existing constraints, manual-focus mode selection, exact FPS constraints, and detection of silently ignored settings. WebSocket tests also exercise control, acknowledgement, and capability forwarding. Camera tests use track doubles to test application logic; they do not validate physical Android hardware. Browser layout, real video/audio playback, camera switching, and actual camera settings still require a trusted phone session.
+
+## Stage 4
+
+Quality helper tests cover target validation, codec preference ordering, sender parameter acknowledgement, receiver hint fallback, and RTP statistics deltas. Android capture, real codec negotiation, actual bitrate and FPS, hardware acceleration, long-session stability, and camera-to-display latency still require device verification. See QUALITY.md for the manual test procedure.

@@ -150,6 +150,8 @@ test('HTTPS serves real status, protects controls, and renews IP certificates wi
   await t.test('serves the dashboard and status without credentials or private keys', async () => {
     const response = await request('/api/status');
     const status = JSON.parse(response.body);
+    assert.equal(status.version, '0.4.0');
+    assert.equal(status.stage, 4);
     assert.equal(status.network.primaryAddress, '192.168.50.10');
     assert.equal(status.server.lanAvailable, false);
     assert.equal(status.network.primaryUrl, null);
@@ -161,7 +163,7 @@ test('HTTPS serves real status, protects controls, and renews IP certificates wi
     assert.match(dashboard.body, /Ada PhoneCam/);
     assert.match(dashboard.headers['content-security-policy'], /default-src 'self'/);
     assert.equal(dashboard.headers['cache-control'], 'no-store');
-    for (const asset of ['/app.js', '/styles.css', '/favicon.svg'])
+    for (const asset of ['/app.js', '/styles.css', '/favicon.svg', '/quality.js'])
       assert.equal((await request(asset)).status, 200);
     assert.equal((await request('/cert/ca.crt')).body, ca.toString());
     const head = await request('/', { method: 'HEAD' });

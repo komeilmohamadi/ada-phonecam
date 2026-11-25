@@ -1,3 +1,8 @@
+import {
+  availableCodecs, captureTargets, configureReceiver, configureSender, defaultQuality,
+  preferCodec, setHint, validateQuality, videoStats,
+} from './quality.js';
+
 const phone = location.pathname === '/phone';
 const $ = (id) => document.getElementById(id);
 let token = location.hash.slice(1);
@@ -20,12 +25,80 @@ export const send = (data) => {
 export const getMedia = () => media;
 export const getPeer = () => pc;
 export const isPhone = phone;
+let quality = { ...defaultQuality }, senderStatus = 'Waiting for negotiation', codecStatus = '';
+let previousStats = null, statsBusy = false;
+let senderQueue = Promise.resolve();
+const metrics = document.createElement('p');
+metrics.textContent = 'Waiting for WebRTC video statistics.';
+metrics.setAttribute('aria-label', phone ? 'Outgoing video statistics' : 'Incoming video statistics');
+$('video').after(metrics);
+export const getQuality = () => ({
+  target: { ...quality },
+  codecs: typeof globalThis.RTCRtpTransceiver?.prototype?.setCodecPreferences === 'function' ? availableCodecs() : [],
+  senderStatus,
+  codecStatus,
+});
+function tuneSender(current) {
+  senderQueue = senderQueue.catch(() => {}).then(() => applySender(current));
+  return senderQueue;
+}
+async function applySender(current) {
+  if (!phone || current !== pc || !current?.remoteDescription) return;
+  const target = quality;
+  try {
+    const result = await configureSender(current.getSenders().find((s) => s.track?.kind === 'video'), target);
+    if (current !== pc || target !== quality) return;
+    senderStatus = `${result.confirmed ? 'Bitrate limit accepted' : 'Bitrate limit not confirmed'}; adaptation: ${result.policy}.`;
+  } catch (error) {
+    if (current !== pc || target !== quality) return;
+    senderStatus = `Sender controls not applied: ${error.message}`;
+  }
+  window.dispatchEvent(new Event('capturechange'));
+}
+export async function changeQuality(value) {
+  const next = validateQuality(value, getQuality().codecs);
+  const track = media?.getVideoTracks()[0];
+  if (!track || track.readyState !== 'live') throw new Error('Start the phone camera first.');
+  const old = quality;
+  await track.applyConstraints({ ...track.getConstraints(), ...captureTargets(next) });
+  if (track !== media?.getVideoTracks()[0]) throw new Error('Camera changed during the request.');
+  quality = next;
+  setHint(track, next.profile);
+  if (!pc?.remoteDescription || next.codec !== old.codec || next.profile !== old.profile) {
+    await offer();
+    return 'Quality targets updated. Check actual statistics after renegotiation.';
+  }
+  await tuneSender(pc);
+  return senderStatus;
+}
+async function refreshStats() {
+  if (statsBusy || !pc || pc.connectionState !== 'connected') return;
+  const current = pc;
+  statsBusy = true;
+  try {
+    const report = await current.getStats();
+    if (current !== pc || current.connectionState !== 'connected') return;
+    const result = videoStats(report, phone ? 'outbound' : 'inbound', previousStats);
+    previousStats = result.sample;
+    const m = result.metrics;
+    if (!m) { metrics.textContent = 'Waiting for video RTP statistics.'; return; }
+    const format = (v, digits = 0) => v === null ? 'N/A' : v.toFixed(digits);
+    metrics.textContent = `${phone ? 'Sending' : 'Receiving'}: ${format(m.width)} x ${format(m.height)} | ${format(m.fps, 1)} FPS | ${format(m.mbps, 2)} Mbps | ${m.codec ?? 'N/A'}${phone ? ` | Limit: ${m.limitation ?? 'N/A'} | ${senderStatus} ${codecStatus}` : ` | Dropped frames: ${format(m.dropped)}`}`;
+  } catch {
+    if (current === pc) metrics.textContent = 'Video statistics unavailable.';
+  } finally {
+    statsBusy = false;
+  }
+}
+const statsTimer = setInterval(refreshStats, 1000);
 function resetPeer() {
   if (pc) {
     pc.onconnectionstatechange = null;
     pc.close();
   }
   pc = null;
+  previousStats = null;
+  metrics.textContent = 'Waiting for WebRTC video statistics.';
   queue = [];
   if (!phone) $('video').srcObject = null;
 }
@@ -59,7 +132,12 @@ function peer(id) {
       .catch(() => status('Press Play on the video to start playback.'));
   };
   current.onconnectionstatechange = () => {
+    if (current !== pc) return;
     status(`Media: ${current.connectionState}`);
+    if (current.connectionState !== 'connected') {
+      previousStats = null;
+      metrics.textContent = `Media: ${current.connectionState}. No current video statistics.`;
+    }
     if (current.connectionState === 'failed')
       status('Media connection failed. Stop and start the camera to retry.');
   };
@@ -68,18 +146,35 @@ function peer(id) {
 export async function offer() {
   if (!media) return;
   const current = peer(crypto.randomUUID());
-  media.getTracks().forEach((track) => current.addTrack(track, media));
+  senderStatus = 'Waiting for negotiation';
+  codecStatus = '';
+  media.getTracks().forEach((track) => {
+    const sender = current.addTrack(track, media);
+    if (track.kind === 'video') {
+      setHint(track, quality.profile);
+      try {
+        preferCodec(current.getTransceivers().find((t) => t.sender === sender), quality.codec);
+      } catch (error) {
+        codecStatus = `Codec preference not applied: ${error.message}`;
+      }
+    }
+  });
   await current.setLocalDescription(await current.createOffer());
-  send({ type: 'offer', description: current.localDescription.toJSON(), epoch });
+  if (current !== pc) return;
+  send({
+    type: 'offer',
+    description: current.localDescription.toJSON(),
+    epoch,
+    profile: quality.profile,
+    codec: quality.codec,
+  });
   current.descriptionSent = true;
   current.pendingCandidates.splice(0).forEach(send);
 }
 export async function capture(
   videoConstraints = {
     facingMode: { ideal: 'environment' },
-    width: { ideal: 1920 },
-    height: { ideal: 1080 },
-    frameRate: { ideal: 60 },
+    ...captureTargets(quality),
   },
   microphoneEnabled = true,
 ) {
@@ -102,7 +197,12 @@ export async function capture(
     stopMedia();
     status('Camera ended. Start it again on this phone.');
   };
-  await offer();
+  try {
+    await offer();
+  } catch (error) {
+    if (generation === captureGeneration) stopMedia();
+    throw error;
+  }
   window.dispatchEvent(new Event('capturechange'));
 }
 async function message(m) {
@@ -141,14 +241,29 @@ async function message(m) {
   } else if (m.type === 'offer' && !phone) {
     const current = peer(m.epoch);
     await current.setRemoteDescription(m.description);
+    for (const transceiver of current.getTransceivers()) {
+      if (transceiver.receiver.track?.kind !== 'video') continue;
+      configureReceiver(transceiver.receiver, m.profile);
+      if (['H264', 'VP8', 'VP9', 'AV1'].includes(m.codec)) {
+        try {
+          preferCodec(transceiver, m.codec);
+        } catch {
+          // The receiver may negotiate a different supported codec.
+        }
+      }
+    }
     await current.setLocalDescription(await current.createAnswer());
+    if (current !== pc) return;
     send({ type: 'answer', description: current.localDescription.toJSON(), epoch });
     current.descriptionSent = true;
     current.pendingCandidates.splice(0).forEach(send);
   } else if (m.type === 'answer' && phone && m.epoch === epoch && pc) {
-    await pc.setRemoteDescription(m.description);
-    for (const candidate of queue) await pc.addIceCandidate(candidate);
+    const current = pc;
+    await current.setRemoteDescription(m.description);
+    if (current !== pc) return;
+    for (const candidate of queue) await current.addIceCandidate(candidate);
     queue = [];
+    await tuneSender(current);
   } else if (m.type === 'candidate' && m.epoch === epoch && pc) {
     if (pc.remoteDescription) await pc.addIceCandidate(m.candidate);
     else queue.push(m.candidate);
@@ -210,6 +325,7 @@ $('sound').onclick = () => {
 window.addEventListener('pagehide', () => {
   closed = true;
   clearTimeout(retry);
+  clearInterval(statsTimer);
   stopMedia();
   ws?.close();
 });

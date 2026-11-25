@@ -15,3 +15,8 @@ config.local.json
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Local Ada Upgrader journals, backups and lock (keep the tool tracked)
+.ada-upgrader/updates/
+.ada-upgrader/history.log
+.ada-upgrader/lock/
